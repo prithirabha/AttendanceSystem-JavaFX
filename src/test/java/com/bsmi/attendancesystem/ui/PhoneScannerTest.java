@@ -18,6 +18,7 @@ import org.testfx.util.WaitForAsyncUtils;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -26,6 +27,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 
 /** Plays the phone: turns the scanner on, then sends card IDs the way the phone page does. */
 class PhoneScannerTest extends AppScreenTest {
+    private static final String SCANNER_PORT_PROPERTY = "attendance.scanner.port";
     private final HttpClient http = HttpClient.newHttpClient();
 
     @BeforeEach
@@ -64,8 +66,43 @@ class PhoneScannerTest extends AppScreenTest {
         clickOn(phoneScanner());
 
         int port = URI.create(pageAddressField().getText()).getPort();
-        assertThat(lookup("#studentAttendance_phoneHint").queryAs(Label.class).getText())
-                .contains("allow TCP port " + port + " ");
+        assertThat(phoneHint()).contains("allow TCP port " + port + " ");
+    }
+
+    @Test
+    void hintSaysWhenTheWantedPortIsBusy() throws IOException {
+        assumeTrue(!NetworkAddresses.forPhones().isEmpty(), "needs a network a phone could use");
+        try (ServerSocket otherProgram = new ServerSocket(0)) {
+            int busyPort = otherProgram.getLocalPort();
+            System.setProperty(SCANNER_PORT_PROPERTY, String.valueOf(busyPort));
+            clickOn(phoneScanner());
+
+            int port = URI.create(pageAddressField().getText()).getPort();
+            assertThat(port).isNotEqualTo(busyPort);
+            assertThat(phoneHint())
+                    .startsWith("Port " + busyPort + " is busy, so this uses " + port + ".")
+                    .contains("allow TCP port " + port + " ");
+        } finally {
+            System.clearProperty(SCANNER_PORT_PROPERTY);
+        }
+    }
+
+    @Test
+    void hintDoesNotMentionABusyPortWhenTheWantedOneIsFree() throws IOException {
+        assumeTrue(!NetworkAddresses.forPhones().isEmpty(), "needs a network a phone could use");
+        int freePort;
+        try (ServerSocket probe = new ServerSocket(0)) {
+            freePort = probe.getLocalPort();
+        }
+        System.setProperty(SCANNER_PORT_PROPERTY, String.valueOf(freePort));
+        try {
+            clickOn(phoneScanner());
+
+            assertThat(URI.create(pageAddressField().getText()).getPort()).isEqualTo(freePort);
+            assertThat(phoneHint()).doesNotContain("busy");
+        } finally {
+            System.clearProperty(SCANNER_PORT_PROPERTY);
+        }
     }
 
     @Test
@@ -151,6 +188,10 @@ class PhoneScannerTest extends AppScreenTest {
 
     private TextField pageAddressField() {
         return lookup("#studentAttendance_phoneAddress").queryAs(TextField.class);
+    }
+
+    private String phoneHint() {
+        return lookup("#studentAttendance_phoneHint").queryAs(Label.class).getText();
     }
 
     private String scanResult() {

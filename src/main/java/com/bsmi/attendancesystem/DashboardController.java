@@ -1051,9 +1051,9 @@ public class DashboardController implements Initializable {
         if (phoneScanner != null) {
             return;
         }
-        int port = Integer.getInteger("attendance.scanner.port", PhoneScanServer.USUAL_PORT);
+        int wantedPort = Integer.getInteger("attendance.scanner.port", PhoneScanServer.USUAL_PORT);
         try {
-            phoneScanner = PhoneScanServer.startPreferring(port, this::scanFromPhone);
+            phoneScanner = PhoneScanServer.startPreferring(wantedPort, this::scanFromPhone);
         } catch (IOException e) {
             studentAttendance_phoneScanner.setSelected(false);
             showAlert(Alert.AlertType.ERROR, "Error Message",
@@ -1065,9 +1065,14 @@ public class DashboardController implements Initializable {
 
         List<Inet4Address> networks = NetworkAddresses.forPhones();
         boolean onANetwork = !networks.isEmpty();
-        studentAttendance_phoneHint.setText(onANetwork
+        int port = phoneScanner.port();
+        // A firewall rule for the wanted port doesn't cover the fallback, so say that it moved
+        String portHint = port == wantedPort
                 ? "Scan this with a phone on the same Wi-Fi. If it can't open the page, allow TCP port "
-                        + phoneScanner.port() + " in the firewall."
+                : "Port " + wantedPort + " is busy, so this uses " + port
+                        + ". For the phone, allow TCP port ";
+        studentAttendance_phoneHint.setText(onANetwork
+                ? portHint + port + " in the firewall."
                 : "No Wi-Fi network found. Only a browser on this computer can open the page below.");
         studentAttendance_phoneNetwork.setItems(FXCollections.observableArrayList(networks));
         studentAttendance_phoneNetwork.setVisible(networks.size() > 1);
