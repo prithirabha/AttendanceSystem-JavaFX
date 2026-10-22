@@ -37,9 +37,14 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 
 Each [GitHub Release](../../releases) has a ready-to-run build for Linux (`.deb` or `.tar.gz`),
 Windows (`.zip`) and macOS (`.dmg`). It brings its own Java runtime, so nothing else needs to be
-installed. The Windows and macOS builds aren't signed, so the first start shows a warning. On
-Windows, click **More info** and then **Run anyway**. On macOS, right-click the app, choose
-**Open** and confirm.
+installed. The release notes say which file is for which computer.
+
+The Windows and macOS builds aren't signed, so the first start shows a warning:
+
+- **Windows:** click **More info**, then **Run anyway**.
+- **macOS:** open the app once and close the warning. Then open **System Settings**, go to
+  **Privacy & Security**, scroll down and click **Open Anyway**. If that button doesn't appear, run
+  `xattr -dr com.apple.quarantine /Applications/AttendanceSystem.app` in Terminal.
 
 ### Build from source
 
@@ -183,6 +188,9 @@ results to a new GitHub Release:
 | `AttendanceSystem-<version>-linux-x64.tar.gz` | The app folder for any Linux; start `bin/AttendanceSystem` |
 | `AttendanceSystem-<version>-windows-x64.zip` | The app folder for Windows; start `AttendanceSystem.exe` |
 | `AttendanceSystem-<version>-macos-arm64.dmg` | The app for Macs with Apple silicon |
+| `SHA256SUMS` | The SHA-256 checksum of each file, to check a download |
+
+The release notes come from `.github/release-notes.md`, followed by GitHub's list of changes.
 
 ## Checking for dependency updates
 

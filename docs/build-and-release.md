@@ -65,6 +65,11 @@ The properties that change the result, all set with `-D` on the command line:
 - `macos-latest` is an Apple silicon Mac, so the DMG is `arm64` only.
 - Only the `publish` job can write to the repository (`contents: write`), and it runs only after all
   three OS builds succeed. One failed OS means no release at all, not a half-finished one.
+- `publish` writes a `SHA256SUMS` file with the checksum of each file and attaches it too.
+- The release notes start with `.github/release-notes.md`: which file is for which computer, how to
+  start it, how to get past the unsigned-app warning, the demo login and the checksums. `publish`
+  fills in the version, the download links and the checksums. GitHub's list of changes since the
+  last release follows below it.
 
 ### The version rule
 
@@ -93,6 +98,7 @@ What checks the build and release, and how to check them yourself.
 | Library updates | Dependabot pull requests, each tested by CI before merging | weekly |
 | Tag format | `v<1 or more>.<n>.<n>`, checked before anything is built | `release.yml` |
 | Binaries | All three OS builds must succeed before `publish` runs | `release.yml` |
+| Checksums | `sha256sum -c --ignore-missing SHA256SUMS` next to the downloaded files | by the user |
 | Workflow files | [actionlint](https://github.com/rhysd/actionlint) finds YAML, expression and shell mistakes | by hand, see below |
 | Diagrams | Each SVG in `docs/diagrams` still holds its Excalidraw drawing, so it can be edited | by hand, see below |
 
@@ -144,10 +150,8 @@ In order of how much they would help users, not how easy they are:
    needed while one person commits directly to `main`.
 4. **Pin the actions to commit SHAs** (`actions/checkout@<sha> # v7`). A tag like `v7` can be moved,
    a SHA can't. Dependabot keeps pinned SHAs up to date too.
-5. **Add checksums to the release notes.** GitHub shows a SHA-256 for each release file, so users
-   can already verify a download. A `SHA256SUMS` file would make that scriptable.
-6. **An Intel Mac build**, only if someone asks for it. It would need a `macos-15-intel` runner in the
+5. **An Intel Mac build**, only if someone asks for it. It would need a `macos-15-intel` runner in the
    matrix, the last Intel image GitHub offers.
-7. **Watch the runner images.** `ubuntu-latest`, `windows-latest` and `macos-latest` move to new
+6. **Watch the runner images.** `ubuntu-latest`, `windows-latest` and `macos-latest` move to new
    OS versions over time. On newer Ubuntu the GTK package is called `libgtk-3-0t64`; it still
    provides `libgtk-3-0`, so the `.deb` dependency works, but check it when the runner changes.

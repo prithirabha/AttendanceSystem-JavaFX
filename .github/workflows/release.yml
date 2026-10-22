@@ -74,13 +74,26 @@ jobs:
       # Creating a release writes to the repository
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/release-notes.md
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v8
         with:
           path: upload
           merge-multiple: true
+      - name: Write the checksums and the release notes
+        run: |
+          (cd upload && sha256sum -- AttendanceSystem-* > SHA256SUMS)
+          sed -e "s|@VERSION@|${GITHUB_REF_NAME#v}|g" \
+              -e "s|@DOWNLOAD@|$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME|g" \
+              .github/release-notes.md |
+            awk '/^@CHECKSUMS@$/ { while ((getline line < "upload/SHA256SUMS") > 0) print line; next } { print }' \
+            > notes.md
       - name: Create the release with the packages attached
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "$GITHUB_REF_NAME" upload/*
-          --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        # The written notes come first, then GitHub's list of changes since the last release
+        run: |
+          gh release create "$GITHUB_REF_NAME" upload/* --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" --notes "$(cat notes.md)" --generate-notes
