@@ -213,8 +213,11 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 For more information about the GNU GPL v3.0 license, please visit the [GNU website](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
-## Author
-[Subhankar Sarkar](https://xaphne.github.io/about)
-
-## Contributor
+## Maintainer
 [Prithiraj Rabha](https://github.com/prithirabha)
+
+## Contributors
+- [Subhankar Sarkar](https://xaphne.github.io/about), who wrote the original
+  [XAPHNE/AttendanceSystem](https://github.com/XAPHNE/AttendanceSystem)
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
