@@ -8,6 +8,8 @@ installed.
 | Ubuntu, Debian | [AttendanceSystem-@VERSION@-linux-amd64.deb](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-amd64.deb) | `sudo apt install ./AttendanceSystem-@VERSION@-linux-amd64.deb`, then open it from the app menu |
 | Any Linux, no install | [AttendanceSystem-@VERSION@-linux-x64.AppImage](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-x64.AppImage) | `chmod +x AttendanceSystem-@VERSION@-linux-x64.AppImage`, then run it |
 | Any Linux, installed | [AttendanceSystem-@VERSION@-linux-x64.tar.gz](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-x64.tar.gz) | Unpack it and run `sudo AttendanceSystem/install.sh` (or without `sudo` for just you), then open it from the app menu |
+| Windows | [AttendanceSystem-@VERSION@-windows-x64.zip](@DOWNLOAD@/AttendanceSystem-@VERSION@-windows-x64.zip) | Unzip it and run `AttendanceSystem\AttendanceSystem.exe` |
+| Mac with Apple silicon | [AttendanceSystem-@VERSION@-macos-arm64.dmg](@DOWNLOAD@/AttendanceSystem-@VERSION@-macos-arm64.dmg) | Open it and drag the app to Applications |
 
 ### Linux libraries
 
@@ -21,8 +23,6 @@ first:
 To remove an installed copy, run `/opt/AttendanceSystem/uninstall.sh` with `sudo`
 (`~/.local/opt/AttendanceSystem/uninstall.sh` for a copy installed just for you). Your data is
 kept.
-| Windows | [AttendanceSystem-@VERSION@-windows-x64.zip](@DOWNLOAD@/AttendanceSystem-@VERSION@-windows-x64.zip) | Unzip it and run `AttendanceSystem\AttendanceSystem.exe` |
-| Mac with Apple silicon | [AttendanceSystem-@VERSION@-macos-arm64.dmg](@DOWNLOAD@/AttendanceSystem-@VERSION@-macos-arm64.dmg) | Open it and drag the app to Applications |
 
 ### The first start on Windows and macOS
 
