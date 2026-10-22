@@ -79,7 +79,10 @@ three courses and a few days of attendance.
 3. Wait a few seconds and scan `DEMO-1001` again to check her out.
 4. Optional: tick **Use phone as scanner**, scan the QR code with your phone (same Wi-Fi), and
    type a card ID on the phone, or photograph a QR card saved with **Save card...** on the
-   Add Student screen.
+   Add Student screen. If the phone can't open the page, the computer's firewall is blocking it:
+   allow TCP port 8765, for example `sudo firewall-cmd --permanent --add-port=8765/tcp` and
+   `sudo firewall-cmd --reload` (Fedora), `sudo ufw allow 8765/tcp` (Ubuntu), or click **Allow**
+   when Windows asks.
 
 ## Using an RFID reader
 

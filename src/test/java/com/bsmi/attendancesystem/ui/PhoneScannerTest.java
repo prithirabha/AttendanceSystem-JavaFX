@@ -2,6 +2,9 @@ package com.bsmi.attendancesystem.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import com.bsmi.attendancesystem.scanner.NetworkAddresses;
 
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -53,6 +56,16 @@ class PhoneScannerTest extends AppScreenTest {
         assertThat(pairingCode.isVisible()).isTrue();
         assertThat(pairingCode.getImage()).isNotNull();
         assertThat(pageAddressField().getText()).matches("http://[0-9.]+:\\d+/[0-9a-f]{32}/");
+    }
+
+    @Test
+    void hintNamesThePortTheFirewallMustAllow() {
+        assumeTrue(!NetworkAddresses.forPhones().isEmpty(), "needs a network a phone could use");
+        clickOn(phoneScanner());
+
+        int port = URI.create(pageAddressField().getText()).getPort();
+        assertThat(lookup("#studentAttendance_phoneHint").queryAs(Label.class).getText())
+                .contains("allow TCP port " + port + " ");
     }
 
     @Test

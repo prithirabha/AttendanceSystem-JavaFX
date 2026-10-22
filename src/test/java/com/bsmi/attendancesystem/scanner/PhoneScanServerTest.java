@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -279,6 +280,26 @@ class PhoneScanServerTest {
     }
 
     @Test
+    void usualPortIsUsedWhenItIsFree() throws Exception {
+        int freePort = freePort();
+
+        server = PhoneScanServer.startPreferring(freePort, checksEveryoneIn());
+
+        assertThat(server.port()).isEqualTo(freePort);
+        assertThat(get(page()).statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void anotherFreePortIsUsedWhenTheUsualOneIsTaken() throws Exception {
+        try (PhoneScanServer first = PhoneScanServer.startPreferring(freePort(), checksEveryoneIn())) {
+            server = PhoneScanServer.startPreferring(first.port(), checksEveryoneIn());
+
+            assertThat(server.port()).isPositive().isNotEqualTo(first.port());
+            assertThat(get(page()).statusCode()).isEqualTo(200);
+        }
+    }
+
+    @Test
     void smallPhotoIsDecodedAsItIs() {
         BufferedImage small =
                 new BufferedImage(PhoneScanServer.MAX_DECODE_SIDE, 900, BufferedImage.TYPE_INT_RGB);
@@ -305,6 +326,12 @@ class PhoneScanServerTest {
         server =
                 PhoneScanServer.start(
                         new InetSocketAddress(NetworkAddresses.thisComputerOnly(), 0), onCardId);
+    }
+
+    private static int freePort() throws IOException {
+        try (ServerSocket probe = new ServerSocket(0)) {
+            return probe.getLocalPort();
+        }
     }
 
     private Function<String, ScanReply> checksEveryoneIn() {

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.net.BindException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -35,6 +36,8 @@ import javax.imageio.ImageIO;
  * anything else gets 404. Each start makes a new token.
  */
 public final class PhoneScanServer implements AutoCloseable {
+    /** Always the same unless another program has it, so a firewall can let this one port in. */
+    public static final int USUAL_PORT = 8765;
     static final int MAX_PHOTO_BYTES = 15 * 1024 * 1024;
     static final int MAX_CARD_ID_LENGTH = 64;
     // Phone photos are 12 megapixels or more; this is plenty for a card and decodes fast
@@ -72,6 +75,21 @@ public final class PhoneScanServer implements AutoCloseable {
         server.createContext("/", phoneScanner::handle);
         server.start();
         return phoneScanner;
+    }
+
+    /**
+     * Starts on {@code usualPort} of every network, or on any free port if another program has it.
+     * {@code onCardId} is called on a background thread.
+     *
+     * @throws IOException if no port can be opened at all
+     */
+    public static PhoneScanServer startPreferring(
+            int usualPort, Function<String, ScanReply> onCardId) throws IOException {
+        try {
+            return start(new InetSocketAddress(usualPort), onCardId);
+        } catch (BindException taken) {
+            return start(new InetSocketAddress(0), onCardId);
+        }
     }
 
     public int port() {

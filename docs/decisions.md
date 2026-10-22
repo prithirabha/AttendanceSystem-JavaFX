@@ -98,6 +98,8 @@ JDK modules, and the libraries sit beside it on the module path.
   - every URL must start with a random 128-bit token (`SecureRandom`); anything else gets 404.
     Switching it off and on makes a new token
   - photos over 15 MB and typed IDs over 64 characters are refused
+  - it listens on port 8765, so a firewall rule can allow just that port. If another program has
+    8765 it takes any free port, and the screen says which one to allow
   - it can only check students in and out, never read or change other data
 
   Anyone on the same network who sees the pairing QR code could scan cards, so it is meant for a

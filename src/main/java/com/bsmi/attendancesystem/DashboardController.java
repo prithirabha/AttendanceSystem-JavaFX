@@ -54,7 +54,6 @@ import java.io.IOException;
 import java.awt.image.BufferedImage;
 import java.io.UncheckedIOException;
 import java.net.Inet4Address;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -1052,10 +1051,9 @@ public class DashboardController implements Initializable {
         if (phoneScanner != null) {
             return;
         }
-        // A fixed port is only needed when a firewall or container must let one port through
-        int port = Integer.getInteger("attendance.scanner.port", 0);
+        int port = Integer.getInteger("attendance.scanner.port", PhoneScanServer.USUAL_PORT);
         try {
-            phoneScanner = PhoneScanServer.start(new InetSocketAddress(port), this::scanFromPhone);
+            phoneScanner = PhoneScanServer.startPreferring(port, this::scanFromPhone);
         } catch (IOException e) {
             studentAttendance_phoneScanner.setSelected(false);
             showAlert(Alert.AlertType.ERROR, "Error Message",
@@ -1068,7 +1066,8 @@ public class DashboardController implements Initializable {
         List<Inet4Address> networks = NetworkAddresses.forPhones();
         boolean onANetwork = !networks.isEmpty();
         studentAttendance_phoneHint.setText(onANetwork
-                ? "Scan this with a phone on the same Wi-Fi, then photograph student cards."
+                ? "Scan this with a phone on the same Wi-Fi. If it can't open the page, allow TCP port "
+                        + phoneScanner.port() + " in the firewall."
                 : "No Wi-Fi network found. Only a browser on this computer can open the page below.");
         studentAttendance_phoneNetwork.setItems(FXCollections.observableArrayList(networks));
         studentAttendance_phoneNetwork.setVisible(networks.size() > 1);
