@@ -1,0 +1,20 @@
+#!/bin/sh
+# Removes the menu entry the postinst added, whichever way it was added.
+set -e
+
+desktop_file=/opt/attendancesystem/lib/attendancesystem-AttendanceSystem.desktop
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        xdg-desktop-menu uninstall "$desktop_file" 2>/dev/null || true
+        rm -f "/usr/share/applications/$(basename "$desktop_file")"
+        ;;
+    failed-upgrade)
+        ;;
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

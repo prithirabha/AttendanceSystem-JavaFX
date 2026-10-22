@@ -354,6 +354,7 @@
                   </javaOptions>
                   <destination>${project.build.directory}/dist</destination>
                   <removeDestination>true</removeDestination>
+                  <resourceDir>${project.basedir}/packaging/jpackage</resourceDir>
                   <linuxShortcut>${dist.shortcuts}</linuxShortcut>
                   <linuxPackageDeps>${dist.linux-deps}</linuxPackageDeps>
                   <winMenu>${dist.shortcuts}</winMenu>

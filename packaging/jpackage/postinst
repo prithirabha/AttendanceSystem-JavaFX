@@ -1,0 +1,25 @@
+#!/bin/sh
+# Replaces jpackage's own postinst, which fails the whole install when xdg-desktop-menu is
+# missing or finds no menu folder (minimal systems, containers, distrobox).
+set -e
+
+desktop_file=/opt/attendancesystem/lib/attendancesystem-AttendanceSystem.desktop
+
+case "$1" in
+    configure)
+        if [ -f "$desktop_file" ]; then
+            if ! xdg-desktop-menu install "$desktop_file" 2>/dev/null; then
+                mkdir -p /usr/share/applications
+                cp "$desktop_file" /usr/share/applications/
+            fi
+        fi
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

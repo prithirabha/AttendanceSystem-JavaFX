@@ -61,6 +61,10 @@ The properties that change the result, all set with `-D` on the command line:
 
 - The release skips the tests (`-DskipTests`): CI has already tested the tagged commit. Push the
   tag only after CI is green on that commit.
+- The `.deb` uses its own `postinst` and `prerm` from `packaging/jpackage` (passed to jpackage as
+  `resourceDir`). jpackage's own scripts fail the whole install when `xdg-desktop-menu` is missing or
+  finds no menu folder, as on a minimal system or in distrobox. Ours copy the menu entry into
+  `/usr/share/applications` in that case.
 - Windows gets a zip and not an MSI, because an MSI needs the WiX Toolset on the runner.
 - `macos-latest` is an Apple silicon Mac, so the DMG is `arm64` only.
 - Only the `publish` job can write to the repository (`contents: write`), and it runs only after all
