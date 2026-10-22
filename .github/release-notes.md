@@ -1,3 +1,10 @@
+## Install with one command
+
+- Linux, macOS: `curl -fsSL https://raw.githubusercontent.com/prithirabha/AttendanceSystem-JavaFX/main/install.sh | sh`
+- Windows (PowerShell): `irm https://raw.githubusercontent.com/prithirabha/AttendanceSystem-JavaFX/main/install.ps1 | iex`
+
+It picks the file for your computer, checks its checksum and installs it. Or download a file below.
+
 ## Download
 
 Pick the file for your computer. Each one brings its own Java runtime, so nothing else needs to be

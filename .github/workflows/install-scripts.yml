@@ -1,0 +1,71 @@
+name: Install scripts
+
+# Installs the latest release with install.sh and install.ps1 the way a user would, on each OS
+on:
+  push:
+    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+  pull_request:
+    paths: [install.sh, install.ps1, .github/workflows/install-scripts.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: install.sh on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      # Piped like "curl ... | sh", so it reads the script from stdin
+      - run: sh < install.sh
+      - name: Check the app is installed
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            dpkg -s attendancesystem
+            test -x /opt/attendancesystem/bin/AttendanceSystem
+          else
+            test -x /Applications/AttendanceSystem.app/Contents/MacOS/AttendanceSystem
+          fi
+      - name: Check a just-for-you install on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sh -s -- --user < install.sh
+          test -x ~/.local/opt/AttendanceSystem/bin/AttendanceSystem
+
+  windows:
+    name: install.ps1 in ${{ matrix.shell }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows PowerShell 5.1 comes with Windows; pwsh is PowerShell 7
+        shell: [powershell, pwsh]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v7
+      # Run the way "irm ... | iex" runs it
+      - run: Get-Content install.ps1 -Raw | Invoke-Expression
+      - name: Check the app, the shortcut and the Apps entry
+        run: |
+          $appDir = Join-Path $env:LOCALAPPDATA 'Programs\AttendanceSystem'
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Attendance System.lnk'
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AttendanceSystem'
+          if (-not (Test-Path "$appDir\AttendanceSystem.exe")) { throw 'AttendanceSystem.exe is missing' }
+          if (-not (Test-Path $shortcut)) { throw 'The Start menu shortcut is missing' }
+          if ((Get-ItemProperty $key).DisplayName -ne 'Attendance System') { throw 'The Apps entry is missing' }
+      - name: Check the uninstall removes all of it
+        run: |
+          $appDir = Join-Path $env:LOCALAPPDATA 'Programs\AttendanceSystem'
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Attendance System.lnk'
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AttendanceSystem'
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$appDir\uninstall.ps1"
+          foreach ($path in $appDir, $shortcut, $key) {
+            if (Test-Path $path) { throw "$path is still there after uninstalling" }
+          }

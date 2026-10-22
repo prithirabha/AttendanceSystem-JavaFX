@@ -83,6 +83,25 @@ The properties that change the result, all set with `-D` on the command line:
   fills in the version, the download links and the checksums. GitHub's list of changes since the
   last release follows below it.
 
+### Install scripts
+
+`install.sh` (Linux, macOS) and `install.ps1` (Windows) at the top of the repo are what the one-line
+install in the README runs, straight from `main`. They download from the latest release, so a new
+release needs no change to them.
+
+- The latest version comes from the redirect of `/releases/latest` in `install.sh` and from the
+  GitHub API in `install.ps1`. Both check the file against `SHA256SUMS` before installing it.
+- `install.sh` uses the `.deb` where `apt-get` and root or `sudo` are there; otherwise it runs the
+  tar.gz's own `install.sh`. It needs only `curl`, `tar` and `sha256sum` (macOS: `shasum`), and no
+  `awk`, which a minimal openSUSE lacks.
+- `install.ps1` installs to `%LOCALAPPDATA%\Programs\AttendanceSystem` and adds a Start menu
+  shortcut and an entry under Settings > Apps, which runs the `uninstall.ps1` it writes.
+- Both run everything from one function called on the last line, so a download cut off halfway
+  runs nothing.
+- `ATTENDANCE_DOWNLOAD_URL` replaces the releases address, for a mirror or a test.
+- `.github/workflows/install-scripts.yml` runs both on Linux, macOS, Windows PowerShell 5.1 and
+  PowerShell 7 whenever they change, and checks the Windows uninstall.
+
 ### The version rule
 
 The tag must look like `v1.2.0` and its first number must be 1 or more. The macOS DMG refuses a
@@ -111,6 +130,7 @@ What checks the build and release, and how to check them yourself.
 | Tag format | `v<1 or more>.<n>.<n>`, checked before anything is built | `release.yml` |
 | Binaries | All three OS builds must succeed before `publish` runs | `release.yml` |
 | Checksums | `sha256sum -c --ignore-missing SHA256SUMS` next to the downloaded files | by the user |
+| Install scripts | Install the latest release on each OS, and uninstall on Windows | `install-scripts.yml` |
 | Workflow files | [actionlint](https://github.com/rhysd/actionlint) finds YAML, expression and shell mistakes | by hand, see below |
 | Diagrams | Each SVG in `docs/diagrams` still holds its Excalidraw drawing, so it can be edited | by hand, see below |
 
@@ -118,7 +138,7 @@ Checking the workflow files before pushing them:
 
 ```sh
 podman run --rm -v "$PWD":/repo:Z,ro -w /repo docker.io/rhysd/actionlint:latest \
-  .github/workflows/ci.yml .github/workflows/release.yml
+  .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/install-scripts.yml
 ```
 
 No output means no problems.

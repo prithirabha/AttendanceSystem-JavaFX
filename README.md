@@ -33,13 +33,42 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 
 ## Try it
 
+### Install with one command
+
+On Linux or a Mac with Apple silicon, open a terminal and run:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/prithirabha/AttendanceSystem-JavaFX/main/install.sh | sh
+```
+
+On Windows, open PowerShell and run:
+
+```powershell
+irm https://raw.githubusercontent.com/prithirabha/AttendanceSystem-JavaFX/main/install.ps1 | iex
+```
+
+The script finds the latest release and the file for your computer, checks its SHA-256 checksum,
+and installs it:
+
+- **Debian, Ubuntu:** the `.deb`, with `sudo`. Add `-s -- --user` after `sh` to install just for
+  you from the `.tar.gz` instead.
+- **Other Linux:** the `.tar.gz`, just for you in `~/.local/opt` (or in `/opt` when run as root),
+  with a menu entry and `uninstall.sh`.
+- **macOS:** the app, copied to Applications.
+- **Windows:** the app, in your own Programs folder (no administrator needed), with a Start menu
+  entry. Remove it from **Settings > Apps**.
+
+Add `-s -- --version 1.2.1` after `sh` (Windows: set `$env:ATTENDANCE_VERSION = "1.2.1"` first) to
+install another version. Running the command again updates the app and keeps your data.
+
 ### Download
 
 Each [GitHub Release](../../releases) has a ready-to-run build for Linux (`.deb`, `.AppImage` or `.tar.gz`),
 Windows (`.zip`) and macOS (`.dmg`). It brings its own Java runtime, so nothing else needs to be
 installed. The release notes say which file is for which computer.
 
-The Windows and macOS builds aren't signed, so the first start shows a warning:
+The Windows and macOS builds aren't signed, so the first start of a file downloaded with a browser
+shows a warning:
 
 - **Windows:** click **More info**, then **Run anyway**.
 - **macOS:** open the app once and close the warning. Then open **System Settings**, go to
