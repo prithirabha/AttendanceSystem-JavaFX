@@ -35,7 +35,7 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 
 ### Download
 
-Each [GitHub Release](../../releases) has a ready-to-run build for Linux (`.deb` or `.tar.gz`),
+Each [GitHub Release](../../releases) has a ready-to-run build for Linux (`.deb`, `.AppImage` or `.tar.gz`),
 Windows (`.zip`) and macOS (`.dmg`). It brings its own Java runtime, so nothing else needs to be
 installed. The release notes say which file is for which computer.
 
@@ -188,7 +188,8 @@ results to a new GitHub Release:
 | File                                     | What it is                                         |
 |------------------------------------------|----------------------------------------------------|
 | `AttendanceSystem-<version>-linux-amd64.deb` | Installer for Ubuntu and Debian, with a menu entry |
-| `AttendanceSystem-<version>-linux-x64.tar.gz` | The app folder for any Linux; start `bin/AttendanceSystem` |
+| `AttendanceSystem-<version>-linux-x64.AppImage` | One file for any x86-64 Linux; make it executable and run it |
+| `AttendanceSystem-<version>-linux-x64.tar.gz` | The app folder for any Linux; `install.sh` installs it with a menu entry |
 | `AttendanceSystem-<version>-windows-x64.zip` | The app folder for Windows; start `AttendanceSystem.exe` |
 | `AttendanceSystem-<version>-macos-arm64.dmg` | The app for Macs with Apple silicon |
 | `SHA256SUMS` | The SHA-256 checksum of each file, to check a download |

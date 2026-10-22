@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Attendance System
+Comment=Keep track of students, courses and attendance
+Exec=AttendanceSystem
+Icon=attendancesystem
+Categories=Office;Education;
+Terminal=false

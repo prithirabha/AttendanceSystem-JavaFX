@@ -44,7 +44,14 @@ jobs:
           sudo apt-get install -y fakeroot
           ./mvnw -B -Pdist clean package -DskipTests -Ddist.version="$VERSION"
           mkdir upload
+          # The folder gets an install script, a menu entry and an icon, so it installs on any distro
+          cp packaging/linux/install.sh packaging/linux/attendancesystem.desktop \
+            packaging/linux/attendancesystem.svg target/dist/AttendanceSystem/
+          chmod +x target/dist/AttendanceSystem/install.sh
           tar -czf "upload/AttendanceSystem-$VERSION-linux-x64.tar.gz" -C target/dist AttendanceSystem
+          sh packaging/linux/build-appimage.sh target/dist/AttendanceSystem \
+            "upload/AttendanceSystem-$VERSION-linux-x64.AppImage"
+          # Building the .deb empties target/dist, so it comes last
           ./mvnw -B -Pdist package -DskipTests -Ddist.version="$VERSION" \
             -Ddist.type=DEB -Ddist.shortcuts=true -Ddist.linux-deps=libgtk-3-0
           cp target/dist/*.deb "upload/AttendanceSystem-$VERSION-linux-amd64.deb"

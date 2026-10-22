@@ -6,7 +6,21 @@ installed.
 | Computer | File | How to start it |
 |---|---|---|
 | Ubuntu, Debian | [AttendanceSystem-@VERSION@-linux-amd64.deb](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-amd64.deb) | `sudo apt install ./AttendanceSystem-@VERSION@-linux-amd64.deb`, then open it from the app menu |
-| Any Linux | [AttendanceSystem-@VERSION@-linux-x64.tar.gz](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-x64.tar.gz) | Unpack it and run `AttendanceSystem/bin/AttendanceSystem` |
+| Any Linux, no install | [AttendanceSystem-@VERSION@-linux-x64.AppImage](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-x64.AppImage) | `chmod +x AttendanceSystem-@VERSION@-linux-x64.AppImage`, then run it |
+| Any Linux, installed | [AttendanceSystem-@VERSION@-linux-x64.tar.gz](@DOWNLOAD@/AttendanceSystem-@VERSION@-linux-x64.tar.gz) | Unpack it and run `sudo AttendanceSystem/install.sh` (or without `sudo` for just you), then open it from the app menu |
+
+### Linux libraries
+
+The app needs GTK 3 and libXtst, which every Linux desktop has. On a minimal system, install them
+first:
+
+- Fedora: `sudo dnf install gtk3 libXtst`
+- openSUSE: `sudo zypper install libgtk-3-0 libgthread-2_0-0 libXtst6`
+- Arch: `sudo pacman -S gtk3 libxtst`
+
+To remove an installed copy, run `/opt/AttendanceSystem/uninstall.sh` with `sudo`
+(`~/.local/opt/AttendanceSystem/uninstall.sh` for a copy installed just for you). Your data is
+kept.
 | Windows | [AttendanceSystem-@VERSION@-windows-x64.zip](@DOWNLOAD@/AttendanceSystem-@VERSION@-windows-x64.zip) | Unzip it and run `AttendanceSystem\AttendanceSystem.exe` |
 | Mac with Apple silicon | [AttendanceSystem-@VERSION@-macos-arm64.dmg](@DOWNLOAD@/AttendanceSystem-@VERSION@-macos-arm64.dmg) | Open it and drag the app to Applications |
 

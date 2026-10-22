@@ -54,7 +54,8 @@ The properties that change the result, all set with `-D` on the command line:
 
 | Runner | Commands | File |
 |---|---|---|
-| ubuntu-latest | `-Pdist clean package`, then a tar of `target/dist/AttendanceSystem` | `AttendanceSystem-<version>-linux-x64.tar.gz` |
+| ubuntu-latest | `-Pdist clean package`, then a tar of `target/dist/AttendanceSystem` with the files from `packaging/linux` | `AttendanceSystem-<version>-linux-x64.tar.gz` |
+| ubuntu-latest | `packaging/linux/build-appimage.sh` on the same folder | `AttendanceSystem-<version>-linux-x64.AppImage` |
 | ubuntu-latest | `-Pdist package -Ddist.type=DEB ...` (needs `fakeroot`) | `AttendanceSystem-<version>-linux-amd64.deb` |
 | windows-latest | `-Pdist clean package`, then `7z` of the folder | `AttendanceSystem-<version>-windows-x64.zip` |
 | macos-latest | `-Pdist clean package -Ddist.type=DMG` | `AttendanceSystem-<version>-macos-arm64.dmg` |
@@ -65,6 +66,13 @@ The properties that change the result, all set with `-D` on the command line:
   `resourceDir`). jpackage's own scripts fail the whole install when `xdg-desktop-menu` is missing or
   finds no menu folder, as on a minimal system or in distrobox. Ours copy the menu entry into
   `/usr/share/applications` in that case.
+- The tar.gz holds `install.sh`, a menu entry and an icon from `packaging/linux`. `sudo ./install.sh`
+  installs to `/opt/AttendanceSystem`; without `sudo` it installs to `~/.local/opt/AttendanceSystem`.
+  Both write an `uninstall.sh` next to the app. The script only copies files, so it works on any
+  distro, and it warns when GTK 3, libgthread or libXtst is missing.
+- `build-appimage.sh` downloads `appimagetool` and the AppImage runtime at pinned versions and checks
+  their SHA-256, so a changed download stops the build. Update both URLs and checksums together.
+- The Linux builds are x86-64 only. An ARM build would need an `ubuntu-24.04-arm` runner.
 - Windows gets a zip and not an MSI, because an MSI needs the WiX Toolset on the runner.
 - `macos-latest` is an Apple silicon Mac, so the DMG is `arm64` only.
 - Only the `publish` job can write to the repository (`contents: write`), and it runs only after all
