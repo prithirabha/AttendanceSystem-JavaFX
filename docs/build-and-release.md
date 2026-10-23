@@ -78,10 +78,32 @@ The properties that change the result, all set with `-D` on the command line:
 - Only the `publish` job can write to the repository (`contents: write`), and it runs only after all
   three OS builds succeed. One failed OS means no release at all, not a half-finished one.
 - `publish` writes a `SHA256SUMS` file with the checksum of each file and attaches it too.
-- The release notes start with `.github/release-notes.md`: which file is for which computer, how to
+- The release notes are `.github/release-notes.md`: which file is for which computer, how to
   start it, how to get past the unsigned-app warning, the demo login and the checksums. `publish`
-  fills in the version, the download links and the checksums. GitHub's list of changes since the
-  last release follows below it.
+  fills in the version, the download links and the checksums, and puts the changes at the top.
+
+### Release notes: what's new and what's fixed
+
+`publish` runs `.github/scripts/release-changes.sh`, which lists every commit since the last
+release (the newest `v` tag before this one) under **What's new**, **Fixes**, **Updates** or
+**Other changes**, each with a link to the commit. A commit picks its section with a last line in
+its message, next to `Signed-off-by`:
+
+```
+Changelog: new
+```
+
+or `Changelog: fix`. A commit without one goes by its title: `Add ...` under What's new, `Fix ...`
+under Fixes, `Bump ...` (Dependabot) under Updates, anything else under Other changes. Any other
+value gives a warning in the release log and lists the commit under Other changes, as a commit
+message can't be changed once it is pushed. Merge commits are left out, since the commits they
+join are listed on their own.
+
+GitHub's own `--generate-notes` isn't used: it lists pull requests only, and most changes go
+straight to `main`. To see the notes for a tag before pushing it, run
+`sh .github/scripts/release-changes.sh v1.2.2 https://github.com/prithirabha/AttendanceSystem-JavaFX`
+in a clone with the tag. `sh .github/scripts/release-changes-test.sh` tests the script against a
+throwaway repo; CI runs it on every push.
 
 ### Install scripts
 
@@ -131,6 +153,7 @@ What checks the build and release, and how to check them yourself.
 | Binaries | All three OS builds must succeed before `publish` runs | `release.yml` |
 | Checksums | `sha256sum -c --ignore-missing SHA256SUMS` next to the downloaded files | by the user |
 | Install scripts | Install the latest release on each OS, and uninstall on Windows | `install-scripts.yml` |
+| Release notes | `release-changes-test.sh` checks the sections against a throwaway repo | `ci.yml`, `release-notes` |
 | Workflow files | [actionlint](https://github.com/rhysd/actionlint) finds YAML, expression and shell mistakes | by hand, see below |
 | Diagrams | Each SVG in `docs/diagrams` still holds its Excalidraw drawing, so it can be edited | by hand, see below |
 

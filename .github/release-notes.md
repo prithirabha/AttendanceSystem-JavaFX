@@ -1,3 +1,5 @@
+@CHANGES@
+
 ## Install with one command
 
 - Linux, macOS: `curl -fsSL https://raw.githubusercontent.com/prithirabha/AttendanceSystem-JavaFX/main/install.sh | sh`

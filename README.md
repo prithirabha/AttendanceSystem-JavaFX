@@ -223,7 +223,9 @@ results to a new GitHub Release:
 | `AttendanceSystem-<version>-macos-arm64.dmg` | The app for Macs with Apple silicon |
 | `SHA256SUMS` | The SHA-256 checksum of each file, to check a download |
 
-The release notes come from `.github/release-notes.md`, followed by GitHub's list of changes.
+The release notes list what's new and what's fixed since the last release, taken from the commit
+messages, followed by `.github/release-notes.md`. See
+[Release notes](docs/build-and-release.md#release-notes-whats-new-and-whats-fixed).
 
 ## Checking for dependency updates
 

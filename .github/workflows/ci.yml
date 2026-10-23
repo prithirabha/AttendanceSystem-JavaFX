@@ -53,3 +53,10 @@ jobs:
           java-version: 27
           cache: maven
       - run: xvfb-run -a ./mvnw -B verify
+
+  release-notes:
+    name: Release notes script
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sh .github/scripts/release-changes-test.sh

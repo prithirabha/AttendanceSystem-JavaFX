@@ -26,6 +26,8 @@ on it before you spend time on it.
   has already been released.
 - New SQL must work on H2 (for example `CURRENT_DATE`, not `CURDATE()`).
 - Name things so the code explains itself, and keep comments for the *why*.
+- If users will notice the change, end the commit message with `Changelog: new` or
+  `Changelog: fix`. It puts the commit title under What's new or Fixes in the next release notes.
 
 ## License
 

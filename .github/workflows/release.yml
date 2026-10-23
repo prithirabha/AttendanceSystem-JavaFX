@@ -83,7 +83,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: .github/release-notes.md
+          # The whole history and the tags, to find the last release and the commits since then
+          fetch-depth: 0
+          sparse-checkout: |
+            .github/release-notes.md
+            .github/scripts/release-changes.sh
           sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v8
         with:
@@ -92,15 +96,19 @@ jobs:
       - name: Write the checksums and the release notes
         run: |
           (cd upload && sha256sum -- AttendanceSystem-* > SHA256SUMS)
+          sh .github/scripts/release-changes.sh "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            > changes.md
           sed -e "s|@VERSION@|${GITHUB_REF_NAME#v}|g" \
               -e "s|@DOWNLOAD@|$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME|g" \
               .github/release-notes.md |
-            awk '/^@CHECKSUMS@$/ { while ((getline line < "upload/SHA256SUMS") > 0) print line; next } { print }' \
+            awk '/^@CHANGES@$/ { while ((getline line < "changes.md") > 0) print line; next }
+                 /^@CHECKSUMS@$/ { while ((getline line < "upload/SHA256SUMS") > 0) print line; next }
+                 { print }' \
             > notes.md
       - name: Create the release with the packages attached
         env:
           GH_TOKEN: ${{ github.token }}
-        # The written notes come first, then GitHub's list of changes since the last release
+        # GitHub's own --generate-notes lists only pull requests, and most changes go straight to main
         run: |
           gh release create "$GITHUB_REF_NAME" upload/* --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --notes "$(cat notes.md)" --generate-notes
+            --title "$GITHUB_REF_NAME" --notes-file notes.md
