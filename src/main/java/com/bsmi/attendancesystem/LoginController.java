@@ -11,7 +11,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.scene.input.MouseEvent;
 
 import com.bsmi.attendancesystem.dao.DataAccessException;
 import com.bsmi.attendancesystem.dao.Database;
@@ -36,8 +35,9 @@ public class LoginController {
     private final AuthService authService =
             new AuthService(new UserDao(Database.fromCurrentSettings()));
 
-    private double xOffset = 0;
-    private double yOffset = 0;
+    // The dashboard screens are laid out for at least this size
+    private static final double DASHBOARD_MIN_WIDTH = 1100;
+    private static final double DASHBOARD_MIN_HEIGHT = 600;
 
     @FXML
     protected void loginButtonOnAction() {
@@ -73,21 +73,10 @@ public class LoginController {
         Stage stage = new Stage();
         Scene scene = new Scene(root);
         stage.setTitle("Dashboard | Student Management System");
-
-        // The window has no title bar, so dragging anywhere on it moves it
-        root.setOnMousePressed((MouseEvent event) -> {
-            xOffset = event.getSceneX();
-            yOffset = event.getSceneY();
-        });
-        root.setOnMouseDragged((MouseEvent event) -> {
-            stage.setX(event.getScreenX() - xOffset);
-            stage.setY(event.getScreenY() - yOffset);
-            stage.setOpacity(.6);
-        });
-        root.setOnMouseReleased((MouseEvent event) -> stage.setOpacity(1));
-
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.setScene(scene);
+        // The window has no title bar or border, so the frame moves and resizes it
+        WindowFrame.makeResizable(stage, DASHBOARD_MIN_WIDTH, DASHBOARD_MIN_HEIGHT);
         stage.show();
     }
 

@@ -65,6 +65,11 @@ The screens are FXML files in `src/main/resources/com/bsmi/attendancesystem/fxml
 `DashboardController` read the form fields, call a service, and show the result. They hold no SQL
 and no business rules.
 
+The windows have no title bar or border from the operating system (`StageStyle.TRANSPARENT`), so
+`WindowFrame` does that job: dragging moves a window, and on the dashboard dragging an edge resizes
+it and the title bar button maximizes it. The dashboard screens use anchors, an `HBox` and a
+`GridPane` instead of fixed positions, so their tables and charts grow with the window.
+
 ## Errors
 
 | Thrown by | Type | What the user sees |
@@ -84,8 +89,9 @@ Run all of them with `./mvnw verify`.
 | `dao/*Test` | Each DAO against its own in-memory H2 with the real migrations: CRUD, not-found, duplicates, injection strings stored as plain text, closed connections |
 | `service/*Test` | Every validation rule and exception, every login outcome, photo copy and rejection, scan in/out/repeat, QR cards drawn and read back |
 | `scanner/*Test` | The phone server over real http: page, typed ID, card photo, wrong token, bad and oversized uploads, stop; address choice |
+| `WindowFrameTest` | Which edges a press resizes, the size after a drag and its minimum, fitting the window on the screen |
 | `AppPathsTest`, `DatabaseSettingsTest`, `DatabaseMigrationsTest`, ... | Folder choice per OS, env variables, a fresh and an already-current database, a broken one |
-| `ui/*Test` (TestFX, tagged `ui`) | Login success and failure, form errors, course delete confirm/cancel, logout, the sidebar highlight, scanning a card, the phone pairing panel |
+| `ui/*Test` (TestFX, tagged `ui`) | Login success and failure, form errors, course delete confirm/cancel, logout, the sidebar highlight, scanning a card, the phone pairing panel, resizing and maximizing the dashboard |
 
 - UI tests need a display. On Linux, CI gives them one with `xvfb-run`. Without a display they are skipped, and
   `-DexcludedGroups=ui` skips them on purpose.

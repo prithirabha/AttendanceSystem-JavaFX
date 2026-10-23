@@ -13,7 +13,9 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 
 - **Login** with two roles. Passwords are stored as bcrypt hashes. An *Admin* can manage users;
   an *Employee* can't see that screen.
-- **Dashboard** with totals and charts of present and absent students.
+- **Dashboard** with totals and charts of present and absent students. Drag an edge or corner to
+  resize the window, or maximize it with the title bar button or a double click; the screens grow
+  with it.
 - **Students**: add, edit, delete and search, with an optional photo.
 - **Courses**: add, edit and delete. A course that students still use can't be deleted.
 - **Attendance**: record entry and exit times by picking a student, or by scanning their card.

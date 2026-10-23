@@ -21,6 +21,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
@@ -48,6 +49,7 @@ import com.bsmi.attendancesystem.service.StudentService;
 import com.bsmi.attendancesystem.service.UserForm;
 import com.bsmi.attendancesystem.service.UserService;
 import com.bsmi.attendancesystem.service.ValidationException;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
 import java.io.IOException;
@@ -209,6 +211,9 @@ public class DashboardController implements Initializable {
     private Button minimize_btn;
 
     @FXML
+    private FontIcon maximize_icon;
+
+    @FXML
     private Button studentAttendance_btn;
 
     @FXML
@@ -328,8 +333,6 @@ public class DashboardController implements Initializable {
     @FXML
     private Label username;
 
-    private double xOffset = 0;
-    private double yOffset = 0;
     private Image image;
     /** The stored photo name of the student in the Add Student form, empty when none is chosen. */
     private String chosenPhotoName = "";
@@ -356,6 +359,24 @@ public class DashboardController implements Initializable {
         stage.setIconified(true);
     }
 //    END CODE FOR MINIMIZE BUTTON
+
+//    START CODE FOR MAXIMIZE BUTTON
+    @FXML
+    public void maximizeBtnOnAction() {
+        WindowFrame frame = WindowFrame.of(main_form.getScene().getWindow());
+        frame.toggleMaximized();
+        maximize_icon.setIconLiteral(
+                frame.isMaximized() ? "far-window-restore" : "far-window-maximize");
+    }
+
+    // A double click on the title bar maximizes, as on most desktops
+    @FXML
+    public void titleBarOnMouseClicked(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+            maximizeBtnOnAction();
+        }
+    }
+//    END CODE FOR MAXIMIZE BUTTON
 
 //    START CODE FOR USERNAME DISPLAY
     public void displayUsername () {
@@ -474,23 +495,9 @@ public class DashboardController implements Initializable {
         Stage stage = new Stage();
         Scene scene = new Scene(root);
         stage.setTitle("Login | Student Management System");
-        // Make the window draggable
-        root.setOnMousePressed((MouseEvent event) -> {
-            xOffset = event.getSceneX();
-            yOffset = event.getSceneY();
-        });
-        root.setOnMouseDragged((MouseEvent event) -> {
-            stage.setX(event.getScreenX() - xOffset);
-            stage.setY(event.getScreenY() - yOffset);
-            stage.setOpacity(.6);
-        });
-
-        // Reset opacity on mouse release
-        root.setOnMouseReleased((MouseEvent event) -> {
-            stage.setOpacity(1);
-        });
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.setScene(scene);
+        WindowFrame.makeMovable(stage);
         stage.show();
     }
 //    END CODE FOR LOGOUT BUTTON
