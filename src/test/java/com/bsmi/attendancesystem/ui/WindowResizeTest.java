@@ -43,14 +43,21 @@ class WindowResizeTest extends AppScreenTest {
     void draggingTheBottomRightCornerMakesTheWindowAndTableBigger() {
         clickOn("#addStudent_btn");
         double tableWidth = studentTable().getWidth();
+        double tableHeight = studentTable().getHeight();
         Rectangle2D before = bounds();
+        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+        // The mouse can't leave the screen, and on a small one the window already fills its width
+        double dx = roomToGrow(before.getMaxX(), screen.getMaxX(), 80);
+        double dy = roomToGrow(before.getMaxY(), screen.getMaxY(), 40);
 
-        drag(new Point2D(before.getMaxX() - 2, before.getMaxY() - 2)).dropBy(80, 40);
+        drag(new Point2D(before.getMaxX() - 2, before.getMaxY() - 2)).dropBy(dx, dy);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(dashboard.getWidth()).isEqualTo(before.getWidth() + 80);
-        assertThat(dashboard.getHeight()).isEqualTo(before.getHeight() + 40);
-        assertThat(studentTable().getWidth()).isEqualTo(tableWidth + 80);
+        assertThat(dy).isPositive();
+        assertThat(dashboard.getWidth()).isEqualTo(before.getWidth() + dx);
+        assertThat(dashboard.getHeight()).isEqualTo(before.getHeight() + dy);
+        assertThat(studentTable().getWidth()).isEqualTo(tableWidth + dx);
+        assertThat(studentTable().getHeight()).isEqualTo(tableHeight + dy);
     }
 
     @Test
@@ -102,6 +109,10 @@ class WindowResizeTest extends AppScreenTest {
         assertThatThrownBy(() -> WindowFrame.of(plain))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("The window has no WindowFrame");
+    }
+
+    private static double roomToGrow(double windowEdge, double screenEdge, double wanted) {
+        return Math.max(0, Math.min(wanted, screenEdge - windowEdge - 2));
     }
 
     private TableView<?> studentTable() {
