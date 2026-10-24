@@ -55,8 +55,9 @@ jobs:
       - run: xvfb-run -a ./mvnw -B verify
 
   release-notes:
-    name: Release notes script
+    name: Release scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - run: sh .github/scripts/release-changes-test.sh
+      - run: sh .github/scripts/prune-old-packages-test.sh

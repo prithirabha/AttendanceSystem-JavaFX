@@ -61,11 +61,12 @@ and installs it:
   entry. Remove it from **Settings > Apps**.
 
 Add `-s -- --version 1.2.1` after `sh` (Windows: set `$env:ATTENDANCE_VERSION = "1.2.1"` first) to
-install another version. Running the command again updates the app and keeps your data.
+install another version, if its release still has its downloads. Running the command again updates
+the app and keeps your data.
 
 ### Download
 
-Each [GitHub Release](../../releases) has a ready-to-run build for Linux (`.deb`, `.AppImage` or `.tar.gz`),
+The [latest GitHub Release](../../releases/latest) has a ready-to-run build for Linux (`.deb`, `.AppImage` or `.tar.gz`),
 Windows (`.zip`) and macOS (`.dmg`). It brings its own Java runtime, so nothing else needs to be
 installed. The release notes say which file is for which computer.
 
@@ -228,6 +229,9 @@ results to a new GitHub Release:
 The release notes list what's new and what's fixed since the last release, taken from the commit
 messages, followed by `.github/release-notes.md`. See
 [Release notes](docs/build-and-release.md#release-notes-whats-new-and-whats-fixed).
+
+Once the new release has all its files, the older releases lose their downloads and keep only their
+notes and the source code. See [Older releases](docs/build-and-release.md#older-releases).
 
 ## Checking for dependency updates
 

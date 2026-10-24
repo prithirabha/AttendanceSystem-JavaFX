@@ -88,6 +88,7 @@ jobs:
           sparse-checkout: |
             .github/release-notes.md
             .github/scripts/release-changes.sh
+            .github/scripts/prune-old-packages.sh
           sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v8
         with:
@@ -112,3 +113,8 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" upload/* --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --notes-file notes.md
+      - name: Remove the downloads from older releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Only after the new release has all its files, so one release always has downloads
+        run: sh .github/scripts/prune-old-packages.sh "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY"

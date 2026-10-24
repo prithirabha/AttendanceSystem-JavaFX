@@ -105,6 +105,27 @@ straight to `main`. To see the notes for a tag before pushing it, run
 in a clone with the tag. `sh .github/scripts/release-changes-test.sh` tests the script against a
 throwaway repo; CI runs it on every push.
 
+### Older releases
+
+Only the newest release keeps its downloads. After `publish` has created the new release, it runs
+`.github/scripts/prune-old-packages.sh`, which removes the packages and `SHA256SUMS` from every
+older release. An old release keeps its notes and GitHub's own **Source code** download, which
+can't be removed, so any version can still be built. A line at the top of its notes points to the
+latest release, since the download links in them no longer work.
+
+- Releases are compared as versions, so `v1.10.0` is newer than `v1.9.0`. Tags that don't look
+  like `v1.2.0` are left alone.
+- A tag for a fix to an older version, such as `v1.1.5` after `v1.2.0`, removes nothing: the
+  newest release keeps its downloads.
+- It runs only after the new release has all its files, so a failed release never leaves a
+  release with no downloads.
+- Running it again changes nothing, and a run that stopped halfway is finished by the next one.
+- The install scripts' `--version` and `ATTENDANCE_VERSION` can then only install the latest
+  version. For an older one they stop with "could not download" and install nothing.
+
+`sh .github/scripts/prune-old-packages-test.sh` tests the script with a fake `gh`; CI runs it on
+every push.
+
 ### Install scripts
 
 `install.sh` (Linux, macOS) and `install.ps1` (Windows) at the top of the repo are what the one-line
