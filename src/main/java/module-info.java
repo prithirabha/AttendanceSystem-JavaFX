@@ -14,7 +14,6 @@ module com.bsmi.attendancesystem {
     requires MaterialFX;
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.ikonli.fontawesome5;
-    requires org.kordamp.ikonli.fontawesome;
 
     // Flyway reads the SQL files through the class loader, which needs the folder opened
     opens db.migration;

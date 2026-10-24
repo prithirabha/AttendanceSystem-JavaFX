@@ -37,7 +37,7 @@
                      <children>
                         <AnchorPane layoutX="155.0" layoutY="-14.0" prefHeight="200.0" prefWidth="1100.0" onMouseClicked="#titleBarOnMouseClicked" styleClass="top-form" stylesheets="@../css/dashboard-style.css" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                            <children>
-                              <FontIcon iconColor="WHITE" iconLiteral="fa-graduation-cap" iconSize="32" layoutX="14.0" layoutY="30.0" />
+                              <FontIcon iconColor="WHITE" iconLiteral="fas-graduation-cap" iconSize="32" layoutX="14.0" layoutY="30.0" />
                               <Label layoutX="62.0" layoutY="6.0" text="Attendance System" textFill="WHITE" styleClass="text-heading" />
                               <HBox AnchorPane.bottomAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                  <children>
@@ -53,7 +53,7 @@
                                     </Button>
                                     <Button fx:id="close_btn" maxHeight="Infinity" mnemonicParsing="false" onAction="#closeBtnOnAction" styleClass="close" stylesheets="@../css/dashboard-style.css">
                                        <graphic>
-                                          <FontIcon iconColor="WHITE" iconLiteral="fa-close" iconSize="20" />
+                                          <FontIcon iconColor="WHITE" iconLiteral="fas-times" iconSize="20" />
                                        </graphic>
                                     </Button>
                                  </children>
@@ -134,7 +134,7 @@
                                                 <String fx:value="shadow" />
                                              </styleClass>
                                              <children>
-                                                <FontIcon iconLiteral="fa-users" iconSize="60" layoutX="14.0" layoutY="85.0" />
+                                                <FontIcon iconLiteral="fas-users" iconSize="60" layoutX="14.0" layoutY="85.0" />
                                                 <Label layoutX="78.0" layoutY="94.0" text="Total Enrolled Students" styleClass="text-emphasis" />
                                                 <Label fx:id="home_totalEnrolled" alignment="CENTER_RIGHT" layoutX="86.0" layoutY="19.0" prefHeight="30.0" prefWidth="168.0" text="0" AnchorPane.rightAnchor="14.0" styleClass="text-title" />
                                              </children>
@@ -242,7 +242,7 @@
                                        </styleClass>
                                        <children>
                                           <TextField fx:id="addStudent_search" layoutX="14.0" layoutY="14.0" onKeyPressed="#addStudent_search_onKeyTyped" prefHeight="24.0" prefWidth="270.0" promptText="Search" styleClass="search" stylesheets="@../css/dashboard-style.css" />
-                                          <FontIcon iconLiteral="fa-search" iconSize="20" layoutX="21.0" layoutY="33.0" />
+                                          <FontIcon iconLiteral="fas-search" iconSize="20" layoutX="21.0" layoutY="33.0" />
                                           <TableView fx:id="addStudent_tableView" layoutX="14.0" layoutY="53.0" onMouseClicked="#addStudentSelect" prefHeight="200.0" prefWidth="847.0" AnchorPane.topAnchor="53.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="12.0" AnchorPane.bottomAnchor="14.0">
                                              <columns>
                                                 <TableColumn fx:id="addStudent_col_studentNum" prefWidth="75.0" text="Student#" />
@@ -389,7 +389,7 @@
                                        </columnResizePolicy>
                                     </TableView>
                                     <TextField fx:id="studentAttendance_search" layoutX="14.0" layoutY="14.0" onAction="#studentAttendanceSearchOnKeyTyped" prefHeight="24.0" prefWidth="270.0" promptText="Search" styleClass="search" stylesheets="@../css/dashboard-style.css" />
-                                    <FontIcon iconLiteral="fa-search" iconSize="20" layoutX="21.0" layoutY="33.0" />
+                                    <FontIcon iconLiteral="fas-search" iconSize="20" layoutX="21.0" layoutY="33.0" />
                                  </children>
                               </AnchorPane>
                            </children>

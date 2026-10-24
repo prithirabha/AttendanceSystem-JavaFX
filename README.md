@@ -251,7 +251,6 @@ The screens are FXML files in `src/main/resources/com/bsmi/attendancesystem/fxml
 2. Click **Search repositories** and add each of these, then choose **Import Component**:
    - `io.github.palexdev:materialfx:11.17.0`
    - `org.kordamp.ikonli:ikonli-javafx:12.4.0`
-   - `org.kordamp.ikonli:ikonli-fontawesome-pack:12.4.0`
    - `org.kordamp.ikonli:ikonli-fontawesome5-pack:12.4.0`
 
 The look comes from the stylesheets in `src/main/resources/com/bsmi/attendancesystem/css`;
