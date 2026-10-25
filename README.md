@@ -19,6 +19,7 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 - **Students**: add, edit, delete and search, with an optional photo.
 - **Courses**: add, edit and delete. A course that students still use can't be deleted.
 - **Attendance**: record entry and exit times by picking a student, or by scanning their card.
+  **Export CSV...** saves the rows shown (after any search) as a file Excel or LibreOffice opens.
 - **Card scanning**: each student can have a card ID. An RFID reader, a barcode or QR scanner, or
   plain typing fills the scan field; the first scan of the day checks the student in, the next one
   checks them out. Each student's QR card can be saved as a PNG to print.

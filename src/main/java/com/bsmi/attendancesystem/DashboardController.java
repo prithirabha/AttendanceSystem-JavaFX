@@ -41,6 +41,7 @@ import com.bsmi.attendancesystem.dao.UserDao;
 import com.bsmi.attendancesystem.scanner.NetworkAddresses;
 import com.bsmi.attendancesystem.scanner.PhoneScanServer;
 import com.bsmi.attendancesystem.scanner.ScanReply;
+import com.bsmi.attendancesystem.service.AttendanceCsv;
 import com.bsmi.attendancesystem.service.AttendanceService;
 import com.bsmi.attendancesystem.service.Backup;
 import com.bsmi.attendancesystem.service.CourseService;
@@ -1196,6 +1197,27 @@ public class DashboardController implements Initializable {
         // Assuming studentAttendance_tableView is your TableView
         sortList.comparatorProperty().bind(studentAttendance_tableView.comparatorProperty());
         studentAttendance_tableView.setItems(sortList);
+    }
+
+    /** Saves the rows the table shows now (after any search) as a CSV file for a spreadsheet. */
+    @FXML
+    public void studentAttendanceExportBtnOnAction() {
+        FileChooser save = new FileChooser();
+        save.setTitle("Export Attendance");
+        save.setInitialFileName("attendance-" + LocalDate.now() + AttendanceCsv.FILE_EXTENSION);
+        save.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV file", "*.csv"));
+        File file = save.showSaveDialog(main_form.getScene().getWindow());
+        if (file == null) {
+            return;
+        }
+        try {
+            Path saved = AttendanceCsv.withCsvExtension(file.toPath());
+            AttendanceCsv.save(List.copyOf(studentAttendance_tableView.getItems()), saved);
+            showAlert(Alert.AlertType.INFORMATION, "Information Message",
+                    "Saved the attendance to " + saved);
+        } catch (UncheckedIOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
+        }
     }
 //    END CODE FOR STUDENT ATTENDANCE FORM
 

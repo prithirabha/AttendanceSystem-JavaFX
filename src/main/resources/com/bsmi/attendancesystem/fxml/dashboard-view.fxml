@@ -389,6 +389,7 @@
                                        </columnResizePolicy>
                                     </TableView>
                                     <TextField fx:id="studentAttendance_search" layoutX="14.0" layoutY="14.0" onAction="#studentAttendanceSearchOnKeyTyped" prefHeight="24.0" prefWidth="270.0" promptText="Search" styleClass="search" stylesheets="@../css/dashboard-style.css" />
+                                    <Button fx:id="studentAttendance_exportBtn" mnemonicParsing="false" onAction="#studentAttendanceExportBtnOnAction" prefHeight="28.0" prefWidth="110.0" styleClass="btn-secondary" stylesheets="@../css/dashboard-style.css" text="Export CSV..." AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="12.0" />
                                     <FontIcon iconLiteral="fas-search" iconSize="20" layoutX="21.0" layoutY="33.0" />
                                  </children>
                               </AnchorPane>

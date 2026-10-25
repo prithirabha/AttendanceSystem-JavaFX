@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bsmi.attendancesystem.StudentAttendanceData;
 import java.util.List;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -28,6 +29,16 @@ class CardScanTest extends AppScreenTest {
     @Test
     void scanFieldHasFocusSoAReaderCanTypeRightAway() {
         assertThat(scanField().isFocused()).isTrue();
+    }
+
+    @Test
+    void exportButtonSitsRightOfTheSearchField() {
+        Button export = lookup("#studentAttendance_exportBtn").queryButton();
+        TextField search = lookup("#studentAttendance_search").queryAs(TextField.class);
+
+        assertThat(export.isVisible()).isTrue();
+        assertThat(export.localToScene(export.getBoundsInLocal()).getMinX())
+                .isGreaterThan(search.localToScene(search.getBoundsInLocal()).getMaxX());
     }
 
     @Test
