@@ -6,6 +6,7 @@ import static com.bsmi.attendancesystem.service.Fields.trimmedOrEmpty;
 
 import com.bsmi.attendancesystem.UserData;
 import com.bsmi.attendancesystem.dao.UserDao;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -26,6 +27,9 @@ public final class UserService {
     private static final int MAX_USERNAME_LENGTH = 45;
 
     private static final int MIN_PASSWORD_LENGTH = 8;
+
+    // bcrypt only reads the first 72 bytes, so anything past that would be silently ignored
+    private static final int MAX_PASSWORD_BYTES = 72;
 
     private final UserDao users;
     private final Passwords passwords;
@@ -71,13 +75,21 @@ public final class UserService {
                             + " characters long and contain both uppercase and lowercase"
                             + " letters");
         }
+        if (form.password().getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
+            throw new InvalidValueException(
+                    PASSWORD, "at most " + MAX_PASSWORD_BYTES + " bytes long");
+        }
         if (!form.password().equals(form.confirmPassword())) {
             throw new InvalidValueException(CONFIRM_PASSWORD, "the same as " + PASSWORD);
         }
     }
 
-    /** @throws AlreadyExistsException if the username is taken */
-    public void add(UserForm form) {
+    /**
+     * @throws NotAllowedException if {@code actor} is not an Admin
+     * @throws AlreadyExistsException if the username is taken
+     */
+    public void add(UserForm form, UserData actor) {
+        requireAdmin(actor);
         requireValid(form);
         String username = trimmedOrEmpty(form.username());
         if (users.findIdOf(username).isPresent()) {
@@ -89,12 +101,14 @@ public final class UserService {
     /**
      * Replaces the chosen user's username, password and role.
      *
+     * @throws NotAllowedException if {@code actor} is not an Admin, would change their own role,
+     *     or this would turn the only Admin into an Employee
      * @throws NotSelectedException if no user is chosen
      * @throws NotFoundException if the chosen user was deleted meanwhile
      * @throws AlreadyExistsException if another user has the new username
-     * @throws NotAllowedException if this would turn the only Admin into an Employee
      */
-    public void update(UserForm form) {
+    public void update(UserForm form, UserData actor) {
+        requireAdmin(actor);
         UserData current = requireChosen(form.userId());
         requireValid(form);
         String username = trimmedOrEmpty(form.username());
@@ -108,6 +122,10 @@ public final class UserService {
             throw new NotAllowedException(
                     describe(current.getUserName()) + " is the only Admin, so it must stay one");
         }
+        if (current.getUserId().equals(actor.getUserId())
+                && !current.getUserRole().equals(form.role())) {
+            throw new NotAllowedException("You can't change your own role");
+        }
         UserData changed = new UserData(current.getUserId(), username, form.role());
         if (!users.update(changed, passwords.hash(form.password()))) {
             throw new NotFoundException(describe(current.getUserName()));
@@ -115,19 +133,21 @@ public final class UserService {
     }
 
     /**
-     * @param loggedInUsername the user of this session, who can't delete themselves
+     * @param actor the user doing the deleting; must be an Admin and can't delete themselves
+     * @throws NotAllowedException if {@code actor} is not an Admin, is the chosen user, or the
+     *     chosen user is the only Admin
      * @throws NotSelectedException if no user is chosen
      * @throws NotFoundException if the chosen user was deleted meanwhile
-     * @throws NotAllowedException if this is the logged-in user or the only Admin
      */
-    public void delete(Integer userId, String loggedInUsername) {
+    public void delete(Integer userId, UserData actor) {
+        requireAdmin(actor);
         UserData user = requireChosen(userId);
-        if (user.getUserName().equals(loggedInUsername)) {
-            throw new NotAllowedException("You can't delete the user you are logged in as");
-        }
         if (isOnlyAdmin(user)) {
             throw new NotAllowedException(
                     describe(user.getUserName()) + " is the only Admin, so it can't be deleted");
+        }
+        if (user.getUserId().equals(actor.getUserId())) {
+            throw new NotAllowedException("You can't delete the user you are logged in as");
         }
         if (!users.delete(user.getUserId())) {
             throw new NotFoundException(describe(user.getUserName()));
@@ -147,6 +167,12 @@ public final class UserService {
         }
         return users.findById(userId)
                 .orElseThrow(() -> new NotFoundException("The chosen user"));
+    }
+
+    private static void requireAdmin(UserData actor) {
+        if (actor == null || !ADMIN.equals(actor.getUserRole())) {
+            throw new NotAllowedException("Only an Admin can manage users");
+        }
     }
 
     private boolean isOnlyAdmin(UserData user) {

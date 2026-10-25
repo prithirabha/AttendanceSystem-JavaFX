@@ -1272,9 +1272,12 @@ public class DashboardController implements Initializable {
     }
     @FXML
     public void userManagementAddBtn_onAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
         UserForm form = userManagementForm();
         try {
-            userService.add(form);
+            userService.add(form, UserSession.current());
             userManagementChanged("User added successfully!");
         } catch (ValidationException e) {
             showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
@@ -1284,6 +1287,9 @@ public class DashboardController implements Initializable {
     }
     @FXML
     public void userManagementUpdateBtn_onAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
         UserForm form = userManagementForm();
         try {
             userService.requireChosen(form.userId());
@@ -1291,7 +1297,7 @@ public class DashboardController implements Initializable {
             if (!confirmed("Are you sure you want to update?")) {
                 return;
             }
-            userService.update(form);
+            userService.update(form, UserSession.current());
             userManagementChanged("Updated Successfully");
         } catch (ValidationException e) {
             showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
@@ -1301,13 +1307,16 @@ public class DashboardController implements Initializable {
     }
     @FXML
     public void userManagementDeleteBtn_onAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
         UserForm form = userManagementForm();
         try {
             UserData chosen = userService.requireChosen(form.userId());
             if (!confirmed("Are you sure you want to delete User: " + chosen.getUserName() + "?")) {
                 return;
             }
-            userService.delete(chosen.getUserId(), UserSession.current().getUserName());
+            userService.delete(chosen.getUserId(), UserSession.current());
             userManagementChanged("Successfully Deleted!");
         } catch (ValidationException e) {
             showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
