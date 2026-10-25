@@ -71,7 +71,10 @@ Lets a phone act as a card reader:
   scanner" is ticked. Every path starts with a random 128-bit token. `GET /<token>/` serves the
   phone page (`scanner/phone-page.html`); `POST /<token>/scan` takes a photo or a typed ID, reads
   the QR code with `QrPhotoReader`, checks the ID, and hands it to the UI thread, which calls
-  `AttendanceService.scan`. The phone gets the same message the desktop shows.
+  `AttendanceService.scan`. The phone gets the same message the desktop shows. The page first
+  shrinks a photo to 1600 pixels on its longest side (the most `QrPhotoReader` uses) as a JPEG,
+  so it uploads quickly; a photo the browser can't draw is sent as it is. The server's size
+  limits still apply to anything that arrives.
 - `QrPhotoReader` returns every QR code in a photo. When ZXing reads nothing, it searches for the
   fourth corner of a tilted card itself (see "Reading tilted photos" in `decisions.md`).
 - `ScanReply` is that answer: whether the scan worked, and the message.

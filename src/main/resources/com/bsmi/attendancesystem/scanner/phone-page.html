@@ -36,6 +36,10 @@
   const result = document.getElementById("result");
   const photo = document.getElementById("photo");
   const buttons = document.querySelectorAll("button");
+  // The app reads a card at 1600 pixels at most, so a bigger photo is shrunk here first and
+  // uploads in a moment instead of sending several megabytes over the Wi-Fi
+  const LONGEST_SIDE = 1600;
+  const JPEG_QUALITY = 0.92;
 
   function show(text, style) {
     result.textContent = text;
@@ -55,13 +59,38 @@
     }
   }
 
-  document.getElementById("take").addEventListener("click", () => photo.click());
-  photo.addEventListener("change", () => {
-    const file = photo.files[0];
-    if (file) {
-      send(file, file.type || "application/octet-stream");
+  async function shrunk(file) {
+    try {
+      const picture = await createImageBitmap(file);
+      const scale = LONGEST_SIDE / Math.max(picture.width, picture.height);
+      if (scale >= 1) {
+        picture.close();
+        return file;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(picture.width * scale);
+      canvas.height = Math.round(picture.height * scale);
+      canvas.getContext("2d").drawImage(picture, 0, 0, canvas.width, canvas.height);
+      picture.close();
+      const jpeg = await new Promise(done => canvas.toBlob(done, "image/jpeg", JPEG_QUALITY));
+      return jpeg || file;
+    } catch (e) {
+      // A photo this browser can't draw goes as it is, and the app says if it can't read it either
+      return file;
     }
+  }
+
+  document.getElementById("take").addEventListener("click", () => photo.click());
+  photo.addEventListener("change", async () => {
+    const file = photo.files[0];
     photo.value = "";
+    if (file) {
+      // Shrinking takes a moment, and a second tap meanwhile would send a second photo
+      buttons.forEach(b => b.disabled = true);
+      show("Checking…", "busy");
+      const upload = await shrunk(file);
+      send(upload, upload.type || "application/octet-stream");
+    }
   });
   document.getElementById("typed").addEventListener("submit", event => {
     event.preventDefault();

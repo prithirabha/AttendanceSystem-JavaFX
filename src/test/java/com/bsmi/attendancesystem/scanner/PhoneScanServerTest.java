@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -39,6 +40,8 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
 import javax.imageio.ImageIO;
@@ -81,6 +84,18 @@ class PhoneScanServerTest {
         assertThat(response.headers().firstValue("Content-Type"))
                 .contains("text/html; charset=utf-8");
         assertThat(response.body()).contains("<title>Card scanner", "Take photo", "fetch(\"scan\"");
+    }
+
+    @Test
+    void pageShrinksPhotosToTheLargestSizeTheAppReads() throws Exception {
+        start(checksEveryoneIn());
+
+        Matcher longestSide =
+                Pattern.compile("const LONGEST_SIDE = (\\d+);").matcher(get(page()).body());
+
+        assertThat(longestSide.find()).isTrue();
+        assertThat(Integer.parseInt(longestSide.group(1)))
+                .isEqualTo(Collections.max(QrPhotoReader.DECODE_SIZES_IN_PIXELS));
     }
 
     @Test

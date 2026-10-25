@@ -107,7 +107,9 @@ JDK modules, and the libraries sit beside it on the module path.
   serves on the Wi-Fi. Browsers allow a live camera only on https pages, and https on a LAN
   address needs a certificate the phone trusts. A photo upload
   (`<input type="file" accept="image/*" capture>`) works over plain http, and the app decodes the
-  QR code from the photo with ZXing.
+  QR code from the photo with ZXing. The page shrinks the photo before sending it, since a phone
+  camera's several megabytes would be slow on a busy Wi-Fi and the app never reads more than
+  1600 pixels anyway.
 - **Reading tilted photos.** Card IDs are short, so cards get the smallest QR code (version 1).
   It has only the three big corner squares and no smaller mark for the fourth corner, so ZXing
   guesses that corner as if the card lay flat, and a photo taken at an angle fails.
