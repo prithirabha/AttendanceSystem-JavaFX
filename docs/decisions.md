@@ -55,6 +55,24 @@ small class, `Passwords`, and new users get hashes with cost 12 (`jbcrypt`). Why
 
 A fast hash like SHA-256 would be the wrong tool here, because speed helps the attacker.
 
+## The demo login hint
+
+Every release ships the demo logins, and the README prints them. The login screen shows a hint
+with them, but only those that still work: when it opens, it tries `admin` / `admin123` and
+`employee` / `employee123` in the background (bcrypt is slow on purpose) and hides the lines that
+fail. A real install whose passwords were changed shows nothing.
+
+- The hint only ever tries those two usernames. It shows before anyone has logged in, so listing
+  "other accounts that still have a weak password" would hand an attacker a list.
+- An account renamed but still on a demo password is caught after login instead: the success
+  message becomes a warning to change it.
+- There is no forced password change or first-start wizard; both would mean new screens for a risk
+  the hint and the warning already cover.
+
+The H2 database itself also has a user and password (`admin` / `admin`). Those stay as they are:
+the database file isn't encrypted, so anyone who can copy it can read it without them. Keeping the
+data folder private is what protects it.
+
 ## jpackage installers
 
 `./mvnw -Pdist package` builds an app that doesn't need Java installed:

@@ -2,11 +2,13 @@ package com.bsmi.attendancesystem;
 
 import io.github.palexdev.materialfx.controls.MFXPasswordField;
 import io.github.palexdev.materialfx.controls.MFXTextField;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.stage.Stage;
@@ -16,10 +18,13 @@ import com.bsmi.attendancesystem.dao.DataAccessException;
 import com.bsmi.attendancesystem.dao.Database;
 import com.bsmi.attendancesystem.dao.UserDao;
 import com.bsmi.attendancesystem.service.AuthService;
+import com.bsmi.attendancesystem.service.AuthService.DemoLogin;
 import com.bsmi.attendancesystem.service.ValidationException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public class LoginController {
     @FXML
@@ -30,6 +35,8 @@ public class LoginController {
     public Button loginButton;
     @FXML
     private Button closeButton;
+    @FXML
+    private Label demoAccountsHint;
 
     private static final System.Logger LOG = System.getLogger(LoginController.class.getName());
     private final AuthService authService =
@@ -38,6 +45,32 @@ public class LoginController {
     // The dashboard screens are laid out for at least this size
     private static final double DASHBOARD_MIN_WIDTH = 1100;
     private static final double DASHBOARD_MIN_HEIGHT = 600;
+
+    public static final String DEMO_PASSWORD_WARNING =
+            "Logged in, but with a demo password that anyone can read in the README. "
+                    + "Change it on Manage Users (or ask an Admin to) before real use.";
+
+    @FXML
+    private void initialize() {
+        // The checks are slow on purpose (bcrypt), so they run in the background
+        CompletableFuture.supplyAsync(authService::demoLoginsThatStillWork)
+                .whenComplete((working, error) -> Platform.runLater(() -> {
+                    if (error != null) {
+                        // The login button reports database problems; the hint just stays hidden
+                        LOG.log(System.Logger.Level.DEBUG, "Demo login check failed", error);
+                    } else {
+                        showDemoLogins(working);
+                    }
+                }));
+    }
+
+    private void showDemoLogins(List<DemoLogin> working) {
+        List<String> lines = working.stream()
+                .map(demo -> demo.username() + " / " + demo.password())
+                .toList();
+        demoAccountsHint.setText("Demo logins: " + String.join("\n", lines));
+        demoAccountsHint.setVisible(!working.isEmpty());
+    }
 
     @FXML
     protected void loginButtonOnAction() {
@@ -58,7 +91,11 @@ public class LoginController {
             return;
         }
         UserSession.start(user.get());
-        showAlert(Alert.AlertType.INFORMATION, "Information Message", "Login Successful");
+        if (AuthService.isPublicDemoPassword(passwordMFXPasswordField.getText())) {
+            showAlert(Alert.AlertType.WARNING, "Demo Password", DEMO_PASSWORD_WARNING);
+        } else {
+            showAlert(Alert.AlertType.INFORMATION, "Information Message", "Login Successful");
+        }
         loginButton.getScene().getWindow().hide();
         try {
             openDashboard();

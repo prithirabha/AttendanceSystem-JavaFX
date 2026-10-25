@@ -8,6 +8,7 @@ import com.bsmi.attendancesystem.dao.DataAccessException;
 import com.bsmi.attendancesystem.dao.Database;
 import com.bsmi.attendancesystem.dao.TestDatabases;
 import com.bsmi.attendancesystem.dao.UserDao;
+import com.bsmi.attendancesystem.service.AuthService.DemoLogin;
 import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,10 +89,82 @@ class AuthServiceTest {
     }
 
     @Test
+    void freshDemoDataHasBothDemoLoginsWorking() {
+        assertThat(auth.demoLoginsThatStillWork())
+                .extracting(DemoLogin::username)
+                .containsExactly("admin", "employee");
+    }
+
+    @Test
+    void demoLoginWithAChangedPasswordIsNoLongerListed() throws SQLException {
+        changePassword("admin", "Principal-Pass-2026");
+
+        assertThat(auth.demoLoginsThatStillWork())
+                .extracting(DemoLogin::username)
+                .containsExactly("employee");
+    }
+
+    @Test
+    void deletedDemoUserIsNoLongerListed() throws SQLException {
+        TestDatabases.execute(database, "DELETE FROM admin WHERE username = 'employee'");
+
+        assertThat(auth.demoLoginsThatStillWork())
+                .extracting(DemoLogin::username)
+                .containsExactly("admin");
+    }
+
+    @Test
+    void renamedDemoUserIsNotListedUnderItsNewName() throws SQLException {
+        TestDatabases.execute(
+                database, "UPDATE admin SET username = 'reception' WHERE username = 'employee'");
+
+        assertThat(auth.demoLoginsThatStillWork())
+                .extracting(DemoLogin::username)
+                .containsExactly("admin");
+    }
+
+    @Test
+    void realInstallWithBothPasswordsChangedListsNoDemoLogins() throws SQLException {
+        changePassword("admin", "Principal-Pass-2026");
+        changePassword("employee", "Reception-Pass-2026");
+
+        assertThat(auth.demoLoginsThatStillWork()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"admin123", "employee123"})
+    void demoPasswordsAreRecognisedForAnyAccount(String demoPassword) {
+        assertThat(AuthService.isPublicDemoPassword(demoPassword)).isTrue();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"Admin123", "admin123 ", " employee123", "admin", "Strong-Pass-1"})
+    void onlyTheExactDemoPasswordsCount(String other) {
+        assertThat(AuthService.isPublicDemoPassword(other)).isFalse();
+    }
+
+    @Test
+    void unreachableDatabaseIsReportedWhenCheckingDemoLogins() {
+        AuthService broken = new AuthService(new UserDao(TestDatabases.unreachable()));
+
+        assertThatThrownBy(broken::demoLoginsThatStillWork)
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
     void unreachableDatabaseIsReported() {
         AuthService broken = new AuthService(new UserDao(TestDatabases.unreachable()));
 
         assertThatThrownBy(() -> broken.login("admin", "admin123"))
                 .isInstanceOf(DataAccessException.class);
+    }
+
+    private void changePassword(String username, String newPassword) throws SQLException {
+        String hash = new Passwords(4).hash(newPassword);
+        TestDatabases.execute(
+                database,
+                "UPDATE admin SET password_hash = '" + hash + "'"
+                        + " WHERE username = '" + username + "'");
     }
 }

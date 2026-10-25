@@ -35,4 +35,5 @@ been released: Flyway checks each one's checksum and refuses to start if one has
   key would be a good next migration.
 - Column names mix `camelCase` and `snake_case` because V1 kept the names of the original
   database, so the existing SQL didn't have to change.
-- Demo logins: `admin` / `admin123` (Admin) and `employee` / `employee123` (Employee).
+- Demo logins: `admin` / `admin123` (Admin) and `employee` / `employee123` (Employee). The login
+  hint lists only those that still work (see `docs/decisions.md`).

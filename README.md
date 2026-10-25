@@ -102,6 +102,10 @@ three courses and a few days of attendance.
 | `admin` | `admin123` | Admin |
 | `employee` | `employee123` | Employee |
 
+Anyone can read these here, so change both passwords on **Manage Users** before real use. The
+login screen lists only the demo logins that still work, so the hint disappears once both are
+changed. Logging in with a demo password shows a warning instead of "Login Successful".
+
 ### Scan a card in 30 seconds
 
 1. Log in as `admin` / `admin123` and open **Attendance**.

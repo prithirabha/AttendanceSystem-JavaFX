@@ -48,6 +48,9 @@ The first start creates a database with demo data. Log in as `admin` / `admin123
 **Attendance**, type `DEMO-1001` and press Enter to check a student in. Updating to a new version
 keeps your data.
 
+Before real use, change the demo passwords on **Manage Users**. The login hint disappears once
+both are changed.
+
 ### Checking a download
 
 These are the SHA-256 checksums of the files, also attached as `SHA256SUMS`. To check, put

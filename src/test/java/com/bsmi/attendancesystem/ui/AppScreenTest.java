@@ -3,6 +3,7 @@ package com.bsmi.attendancesystem.ui;
 import com.bsmi.attendancesystem.AppPaths;
 import com.bsmi.attendancesystem.AttendanceApplication;
 import com.bsmi.attendancesystem.UserSession;
+import com.bsmi.attendancesystem.dao.Database;
 import java.nio.file.Path;
 import java.util.List;
 import javafx.scene.control.Button;
@@ -33,11 +34,15 @@ abstract class AppScreenTest extends FxRobot {
                 () -> {
                     AttendanceApplication app = new AttendanceApplication();
                     app.init();
+                    changeDemoData(Database.fromCurrentSettings());
                     // The app styles its window, which only works on a stage never shown before
                     app.start(new Stage());
                     return null;
                 });
     }
+
+    /** Runs after the database is created and before the login screen opens. */
+    void changeDemoData(Database database) throws Exception {}
 
     @AfterEach
     void closeApp() {
