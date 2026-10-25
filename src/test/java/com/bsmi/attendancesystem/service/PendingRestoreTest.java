@@ -6,6 +6,7 @@ import static com.bsmi.attendancesystem.service.PendingRestore.IMAGES_FOLDER;
 import static com.bsmi.attendancesystem.service.PendingRestore.PENDING_FOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -119,6 +120,40 @@ class PendingRestoreTest {
         PendingRestore.deleteTree(dataFolder.resolve("missing"));
 
         assertThat(dataFolder.resolve("missing")).doesNotExist();
+    }
+
+    @Test
+    void aSymbolicLinkInThePendingFolderIsRefused() throws IOException {
+        writeCurrentData();
+        Files.createDirectories(pending.resolve(IMAGES_FOLDER));
+        Path elsewhere = Files.writeString(dataFolder.resolve("secret"), "secret");
+        try {
+            Files.createSymbolicLink(pending.resolve(DATABASE_FILE), elsewhere);
+        } catch (IOException | UnsupportedOperationException noSymlinks) {
+            assumeTrue(false, "This file system does not allow symbolic links");
+        }
+        Files.createFile(pending.resolve(COMPLETE_MARKER));
+
+        assertThatThrownBy(() -> PendingRestore.applyIfReady(dataFolder, NOW))
+                .isInstanceOf(UncheckedIOException.class);
+        assertThat(dataFolder.resolve(DATABASE_FILE)).hasContent("current database");
+    }
+
+    @Test
+    void aSymbolicLinkWhereTheSafetyCopyGoesIsRefused() throws IOException {
+        writeCurrentData();
+        writePending(true);
+        Path attacker = Files.createDirectories(dataFolder.resolve("attacker"));
+        try {
+            Files.createSymbolicLink(safetyCopy, attacker);
+        } catch (IOException | UnsupportedOperationException noSymlinks) {
+            assumeTrue(false, "This file system does not allow symbolic links");
+        }
+
+        assertThatThrownBy(() -> PendingRestore.applyIfReady(dataFolder, NOW))
+                .isInstanceOf(UncheckedIOException.class);
+        assertThat(dataFolder.resolve(DATABASE_FILE)).hasContent("current database");
+        assertThat(attacker.resolve(DATABASE_FILE)).doesNotExist();
     }
 
     private void writeCurrentData() throws IOException {

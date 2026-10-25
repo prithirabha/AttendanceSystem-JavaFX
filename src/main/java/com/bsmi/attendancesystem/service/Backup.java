@@ -47,6 +47,9 @@ public final class Backup {
     static final int MIN_PASSWORD_LENGTH = 12;
     // Far above any school's data, but stops a small file that unpacks to fill the disk
     static final long DEFAULT_MAX_RESTORED_BYTES = 5L * 1024 * 1024 * 1024;
+    // Far above any school's students, but stops a backup with millions of tiny entries that
+    // would exhaust memory or inodes long before the byte cap is reached
+    static final int DEFAULT_MAX_RESTORED_ENTRIES = 100_000;
 
     static final String SERVER_DATABASE =
             "Back up your database server with its own tools; this button covers only the"
@@ -73,17 +76,29 @@ public final class Backup {
     private final Path dataFolder;
     private final BackupCipher cipher;
     private final long maxRestoredBytes;
+    private final int maxRestoredEntries;
 
     public Backup(Database database, Path dataFolder) {
-        this(database, dataFolder, new BackupCipher(), DEFAULT_MAX_RESTORED_BYTES);
+        this(
+                database,
+                dataFolder,
+                new BackupCipher(),
+                DEFAULT_MAX_RESTORED_BYTES,
+                DEFAULT_MAX_RESTORED_ENTRIES);
     }
 
-    Backup(Database database, Path dataFolder, BackupCipher cipher, long maxRestoredBytes) {
+    Backup(
+            Database database,
+            Path dataFolder,
+            BackupCipher cipher,
+            long maxRestoredBytes,
+            int maxRestoredEntries) {
         this.database = database;
         this.backupDao = new BackupDao(database);
         this.dataFolder = dataFolder.toAbsolutePath();
         this.cipher = cipher;
         this.maxRestoredBytes = maxRestoredBytes;
+        this.maxRestoredEntries = maxRestoredEntries;
     }
 
     /** @throws NotAllowedException if the app uses a database server instead of its own file */
@@ -239,6 +254,9 @@ public final class Backup {
             // Also blocks "zip slip": names like "../x" or "/etc/x" that would land elsewhere
             if (!isDatabaseOrPhoto(name) || !unpacked.add(name)) {
                 throw new UnreadableBackupException(UNEXPECTED_CONTENT);
+            }
+            if (unpacked.size() > maxRestoredEntries) {
+                throw new UnreadableBackupException(TOO_BIG);
             }
             bytesLeft -= copyAtMost(zip, pending.resolve(name), bytesLeft);
         }

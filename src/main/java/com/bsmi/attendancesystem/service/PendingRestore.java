@@ -4,6 +4,7 @@ import com.bsmi.attendancesystem.DatabaseSettings;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -64,14 +65,24 @@ public final class PendingRestore {
 
     /** Leaves out an item an earlier, interrupted start already moved. */
     private static void swapIn(Path restored, Path current, Path safetyCopy) throws IOException {
-        if (!Files.exists(restored)) {
+        if (!Files.exists(restored, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        if (Files.exists(current)) {
+        // A symbolic link here would be a planted redirect; a move must never follow one
+        refuseSymbolicLink(restored);
+        if (Files.exists(current, LinkOption.NOFOLLOW_LINKS)) {
+            refuseSymbolicLink(current);
+            refuseSymbolicLink(safetyCopy);
             Files.createDirectories(safetyCopy);
             Files.move(current, safetyCopy.resolve(current.getFileName()));
         }
         Files.move(restored, current);
+    }
+
+    private static void refuseSymbolicLink(Path path) throws IOException {
+        if (Files.isSymbolicLink(path)) {
+            throw new IOException("Refusing to follow the symbolic link " + path);
+        }
     }
 
     static void deleteTree(Path folder) throws IOException {

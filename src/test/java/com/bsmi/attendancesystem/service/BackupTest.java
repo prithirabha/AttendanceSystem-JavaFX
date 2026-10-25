@@ -37,6 +37,7 @@ class BackupTest {
     private static final byte[] PHOTO_BYTES = {1, 2, 3, 4};
     private static final byte[] DATABASE_BYTES = "not really a database".getBytes(UTF_8);
     private static final long SIZE_LIMIT = 10L * 1024 * 1024;
+    private static final int ENTRY_LIMIT = 1000;
     private static final String INSERT_STUDENT =
             "INSERT INTO student (studentNum, semester, course, firstName, lastName, gender,"
                     + " birthDate, status, image, added_on) VALUES (900001, 'First Year', 'BSIT',"
@@ -58,7 +59,7 @@ class BackupTest {
         dataFolder = tempDir.resolve("data");
         pending = dataFolder.resolve(PendingRestore.PENDING_FOLDER);
         database = TestDatabases.migratedFile(dataFolder);
-        backup = new Backup(database, dataFolder, cipher, SIZE_LIMIT);
+        backup = new Backup(database, dataFolder, cipher, SIZE_LIMIT, ENTRY_LIMIT);
         currentSchemaVersion = new BackupDao(database).schemaVersion();
     }
 
@@ -72,7 +73,8 @@ class BackupTest {
         Path otherFolder = tempDir.resolve("other-computer");
         Database otherDatabase = TestDatabases.migratedFile(otherFolder);
         writePhoto(otherFolder, OTHER_PHOTO);
-        new Backup(otherDatabase, otherFolder, cipher, SIZE_LIMIT).restore(file, PASSWORD);
+        new Backup(otherDatabase, otherFolder, cipher, SIZE_LIMIT, ENTRY_LIMIT)
+                .restore(file, PASSWORD);
         PendingRestore.applyIfReady(otherFolder);
 
         assertThat(TestDatabases.queryNumber(otherDatabase, studentCount(900001))).isEqualTo(1);
@@ -311,8 +313,22 @@ class BackupTest {
     }
 
     @Test
+    void backupWithTooManyEntriesIsRefused() throws IOException {
+        Backup limited = new Backup(database, dataFolder, cipher, SIZE_LIMIT, 2);
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        entries.put(PendingRestore.DATABASE_FILE, DATABASE_BYTES);
+        entries.put("images/" + PHOTO, PHOTO_BYTES);
+        entries.put("images/" + OTHER_PHOTO, PHOTO_BYTES);
+
+        assertThatThrownBy(() -> limited.restore(encrypted(zipOf(entries)), PASSWORD))
+                .isInstanceOf(UnreadableBackupException.class)
+                .hasMessage(Backup.TOO_BIG);
+        assertThat(pending).doesNotExist();
+    }
+
+    @Test
     void backupThatUnpacksTooBigIsRefused() throws IOException {
-        Backup limited = new Backup(database, dataFolder, cipher, 1000);
+        Backup limited = new Backup(database, dataFolder, cipher, 1000, ENTRY_LIMIT);
         // Zeros compress to almost nothing: a small file that unpacks big, like a "zip bomb"
         Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, new byte[1001])));
 
@@ -324,7 +340,7 @@ class BackupTest {
 
     @Test
     void sizeLimitCountsAllEntriesTogether() throws IOException {
-        Backup limited = new Backup(database, dataFolder, cipher, 1000);
+        Backup limited = new Backup(database, dataFolder, cipher, 1000, ENTRY_LIMIT);
         Map<String, byte[]> entries = new LinkedHashMap<>();
         entries.put(PendingRestore.DATABASE_FILE, new byte[600]);
         entries.put("images/" + PHOTO, new byte[600]);
