@@ -90,6 +90,14 @@ JDK modules, and the libraries sit beside it on the module path.
   address needs a certificate the phone trusts. A photo upload
   (`<input type="file" accept="image/*" capture>`) works over plain http, and the app decodes the
   QR code from the photo with ZXing.
+- **Reading tilted photos.** Card IDs are short, so cards get the smallest QR code (version 1).
+  It has only the three big corner squares and no smaller mark for the fourth corner, so ZXing
+  guesses that corner as if the card lay flat, and a photo taken at an angle fails.
+  `QrPhotoReader` then tries fourth corners around that guess, nearest first, and the code's
+  error correction turns down every wrong one. It also reads each photo at 1600 and 1000 pixels,
+  because corner squares one size misses, the other often finds. BoofCV, a library that solves
+  this, was tried first: its jars split packages between modules, which a Java module app can't
+  load.
 - **Other readers.** A serial or Arduino reader, or a reader with its own SDK, would be one more
   class that reads IDs and calls `AttendanceService.scan` on the UI thread, the same way
   `PhoneScanServer` does. Nothing else changes.
@@ -97,7 +105,14 @@ JDK modules, and the libraries sit beside it on the module path.
   - it runs only while "Use phone as scanner" is ticked, and stops on untick, logout and exit
   - every URL must start with a random 128-bit token (`SecureRandom`); anything else gets 404.
     Switching it off and on makes a new token
-  - photos over 15 MB and typed IDs over 64 characters are refused
+  - photos over 15 MB are refused, and so are photos whose header claims over 64 megapixels.
+    The size is read from the header before decoding, as a small file can claim a picture that
+    would take gigabytes of memory
+  - the text read from a QR code comes from outside like a typed ID, so both get the same
+    checks: at most 64 characters and no control characters
+  - a photo with several QR codes is refused, as picking one could check in the wrong student
+  - an image reader or QR reader that crashes on a crafted file gives a plain answer (415 or
+    422), never a server error; the QR reader's crash is logged
   - it listens on port 8765, so a firewall rule can allow just that port. If another program has
     8765 it takes any free port, and the screen says that 8765 was busy and which port to allow
   - it can only check students in and out, never read or change other data

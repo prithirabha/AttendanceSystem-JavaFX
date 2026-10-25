@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bsmi.attendancesystem.StudentData;
+import com.bsmi.attendancesystem.scanner.QrPhotoReader;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -13,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Date;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
@@ -31,14 +31,15 @@ class StudentCardsTest {
 
         assertThat(card.getWidth()).isEqualTo(StudentCards.WIDTH);
         assertThat(card.getHeight()).isEqualTo(StudentCards.HEIGHT);
-        assertThat(StudentCards.decode(card)).contains("DEMO-1001");
+        assertThat(QrPhotoReader.codesIn(card)).containsExactly("DEMO-1001");
     }
 
     @Test
     void longestCardIdStillFitsInTheQrCode() {
         String longest = "C".repeat(StudentService.CARD_ID_MAX_LENGTH);
+        BufferedImage card = StudentCards.draw(asha(longest));
 
-        assertThat(StudentCards.decode(StudentCards.draw(asha(longest)))).contains(longest);
+        assertThat(QrPhotoReader.codesIn(card)).containsExactly(longest);
     }
 
     @Test
@@ -51,7 +52,7 @@ class StudentCardsTest {
         g.drawImage(card, 500, 300, card.getWidth() / 2, card.getHeight() / 2, null);
         g.dispose();
 
-        assertThat(StudentCards.decode(photo)).contains("DEMO-1001");
+        assertThat(QrPhotoReader.codesIn(photo)).containsExactly("DEMO-1001");
     }
 
     @Test
@@ -62,7 +63,7 @@ class StudentCardsTest {
 
         assertThat(qr.getWidth()).isEqualTo(110);
         assertThat(qr.getHeight()).isEqualTo(110);
-        assertThat(StudentCards.decode(withQuietZone(qr))).contains(pageAddress);
+        assertThat(QrPhotoReader.codesIn(withQuietZone(qr))).containsExactly(pageAddress);
     }
 
     @Test
@@ -71,7 +72,8 @@ class StudentCardsTest {
 
         // The smallest QR code is 21 by 21 squares, here one pixel each
         assertThat(qr.getWidth()).isEqualTo(21);
-        assertThat(StudentCards.decode(withQuietZone(enlarged(qr, 10)))).contains("DEMO-1001");
+        assertThat(QrPhotoReader.codesIn(withQuietZone(enlarged(qr, 10))))
+                .containsExactly("DEMO-1001");
     }
 
     @Test
@@ -87,7 +89,8 @@ class StudentCardsTest {
 
         StudentCards.savePng(asha("DEMO-1001"), file);
 
-        assertThat(StudentCards.decode(ImageIO.read(file.toFile()))).contains("DEMO-1001");
+        assertThat(QrPhotoReader.codesIn(ImageIO.read(file.toFile())))
+                .containsExactly("DEMO-1001");
     }
 
     @Test
@@ -107,26 +110,6 @@ class StudentCardsTest {
         assertThatThrownBy(() -> StudentCards.draw(asha(noCard)))
                 .isInstanceOf(MissingFieldException.class)
                 .hasMessage("Please fill in the Card ID field");
-    }
-
-    @Test
-    void blankImageHasNoCardId() {
-        BufferedImage blank = new BufferedImage(400, 400, BufferedImage.TYPE_INT_RGB);
-
-        assertThat(StudentCards.decode(blank)).isEmpty();
-    }
-
-    @Test
-    void noiseHasNoCardId() {
-        Random seeded = new Random(42);
-        BufferedImage noise = new BufferedImage(400, 400, BufferedImage.TYPE_INT_RGB);
-        for (int y = 0; y < noise.getHeight(); y++) {
-            for (int x = 0; x < noise.getWidth(); x++) {
-                noise.setRGB(x, y, seeded.nextBoolean() ? 0xFFFFFF : 0x000000);
-            }
-        }
-
-        assertThat(StudentCards.decode(noise)).isEmpty();
     }
 
     @Test

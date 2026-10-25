@@ -2,15 +2,9 @@ package com.bsmi.attendancesystem.service;
 
 import com.bsmi.attendancesystem.StudentData;
 import com.google.zxing.BarcodeFormat;
-import com.google.zxing.BinaryBitmap;
-import com.google.zxing.DecodeHintType;
 import com.google.zxing.EncodeHintType;
-import com.google.zxing.ReaderException;
-import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.qrcode.QRCodeReader;
 import com.google.zxing.qrcode.QRCodeWriter;
 import java.awt.Color;
 import java.awt.Font;
@@ -23,7 +17,6 @@ import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import javax.imageio.ImageIO;
 
 /**
@@ -101,23 +94,6 @@ public final class StudentCards {
         return name.toLowerCase(Locale.ROOT).endsWith(".png")
                 ? file
                 : file.resolveSibling(name + ".png");
-    }
-
-    /** @return the text of the QR code in the image, or empty if there is no readable one */
-    public static Optional<String> decode(BufferedImage image) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
-        BinaryBitmap bitmap =
-                new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(width, height, pixels)));
-        try {
-            return Optional.of(
-                    new QRCodeReader()
-                            .decode(bitmap, Map.of(DecodeHintType.TRY_HARDER, Boolean.TRUE))
-                            .getText());
-        } catch (ReaderException noReadableQrCode) {
-            return Optional.empty();
-        }
     }
 
     /** A black-on-white QR code of the text, {@code size} pixels square, with no border. */

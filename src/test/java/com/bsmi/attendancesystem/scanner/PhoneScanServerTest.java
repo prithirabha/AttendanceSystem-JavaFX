@@ -13,6 +13,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ConnectException;
@@ -25,17 +26,36 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.zip.CRC32;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.spi.IIORegistry;
+import javax.imageio.spi.ImageReaderSpi;
+import javax.imageio.stream.ImageInputStream;
 
 /** Talks to the server the way the phone page does, over real HTTP on this computer. */
 class PhoneScanServerTest {
     private static final String CHECKED_IN = "Asha Verma checked in 09:12";
+    private static final BuggyReaderPlugin BUGGY_READER = new BuggyReaderPlugin();
+    // Held here, as the logging system forgets loggers nobody holds
+    private static final Logger SERVER_LOG = Logger.getLogger(PhoneScanServer.class.getName());
 
     private final HttpClient http = HttpClient.newHttpClient();
     // Card IDs the server passed on to the app
@@ -44,6 +64,7 @@ class PhoneScanServerTest {
 
     @AfterEach
     void stopServer() {
+        IIORegistry.getDefaultInstance().deregisterServiceProvider(BUGGY_READER);
         if (server != null) {
             server.close();
         }
@@ -183,6 +204,19 @@ class PhoneScanServerTest {
     }
 
     @Test
+    void photoCutOffInsideItsHeaderIsRefused() throws Exception {
+        start(checksEveryoneIn());
+        byte[] photo = png(StudentCards.draw(asha()));
+
+        // 20 bytes: the PNG mark is there, the picture size is not
+        HttpResponse<String> response = postPhoto(Arrays.copyOf(photo, 20));
+
+        assertThat(response.statusCode()).isEqualTo(415);
+        assertThat(response.body()).startsWith("That file is not a photo");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
     void pictureWithoutAQrCodeAsksForAnotherTry() throws Exception {
         start(checksEveryoneIn());
 
@@ -300,26 +334,119 @@ class PhoneScanServerTest {
     }
 
     @Test
-    void smallPhotoIsDecodedAsItIs() {
-        BufferedImage small =
-                new BufferedImage(PhoneScanServer.MAX_DECODE_SIDE, 900, BufferedImage.TYPE_INT_RGB);
+    void photoClaimingMorePixelsThanTheLimitIsRefusedWithoutDecodingIt() throws Exception {
+        start(checksEveryoneIn());
+        // 30000 by 30000 would need 3.6 GB once decoded; the file itself is tiny
+        byte[] claimsToBeHuge = pngClaimingToBe(30_000, 30_000);
 
-        assertThat(PhoneScanServer.shrinkForDecoding(small)).isSameAs(small);
+        HttpResponse<String> response = postPhoto(claimsToBeHuge);
+
+        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.body()).startsWith("The photo is over 64 megapixels");
+        assertThat(received).isEmpty();
     }
 
     @Test
-    void bigPhotoIsShrunkKeepingItsShape() {
-        BufferedImage landscape =
-                PhoneScanServer.shrinkForDecoding(
-                        new BufferedImage(4000, 3000, BufferedImage.TYPE_INT_RGB));
-        BufferedImage portrait =
-                PhoneScanServer.shrinkForDecoding(
-                        new BufferedImage(3000, 4000, BufferedImage.TYPE_INT_RGB));
+    void qrCodeTextOfTheLongestAllowedLengthIsPassedOn() throws Exception {
+        start(checksEveryoneIn());
+        String longest = "C".repeat(PhoneScanServer.MAX_CARD_ID_LENGTH);
 
-        assertThat(landscape.getWidth()).isEqualTo(1600);
-        assertThat(landscape.getHeight()).isEqualTo(1200);
-        assertThat(portrait.getWidth()).isEqualTo(1200);
-        assertThat(portrait.getHeight()).isEqualTo(1600);
+        assertThat(postPhoto(png(photoOfCodes(longest))).statusCode()).isEqualTo(200);
+        assertThat(received).containsExactly(longest);
+    }
+
+    @Test
+    void qrCodeTextLongerThanAnyCardIsRefused() throws Exception {
+        start(checksEveryoneIn());
+        String tooLong = "C".repeat(PhoneScanServer.MAX_CARD_ID_LENGTH + 1);
+
+        HttpResponse<String> response = postPhoto(png(photoOfCodes(tooLong)));
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).isEqualTo("A card ID is at most 64 characters");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void qrCodeTextWithAControlCharacterIsRefused() throws Exception {
+        start(checksEveryoneIn());
+
+        HttpResponse<String> response = postPhoto(png(photoOfCodes("DEMO-1001\u0007\r\nDROP")));
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).isEqualTo("A card ID can't contain control characters");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void typedCardIdWithAControlCharacterIsRefused() throws Exception {
+        start(checksEveryoneIn());
+
+        HttpResponse<String> response = postTyped("DEMO\u00001001");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).isEqualTo("A card ID can't contain control characters");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void photoOfTwoCardsAsksForOneAtATime() throws Exception {
+        start(checksEveryoneIn());
+
+        HttpResponse<String> response = postPhoto(png(photoOfCodes("DEMO-1001", "DEMO-1002")));
+
+        assertThat(response.statusCode()).isEqualTo(422);
+        assertThat(response.body())
+                .isEqualTo("The photo shows 2 QR codes. Photograph one card at a time");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void imageReaderThatCrashesCountsAsAFileTheAppCanNotRead() throws Exception {
+        start(checksEveryoneIn());
+        IIORegistry.getDefaultInstance().registerServiceProvider(BUGGY_READER);
+
+        HttpResponse<String> response = postPhoto(BuggyReaderPlugin.READING_FAILS);
+
+        assertThat(response.statusCode()).isEqualTo(415);
+        assertThat(response.body()).startsWith("That file is not a photo");
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void crashWhileLookingForQrCodesAsksForAnotherTryAndIsLogged() throws Exception {
+        start(checksEveryoneIn());
+        IIORegistry.getDefaultInstance().registerServiceProvider(BUGGY_READER);
+        List<LogRecord> logged = new CopyOnWriteArrayList<>();
+        Handler keep = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                logged.add(record);
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        SERVER_LOG.addHandler(keep);
+        try {
+            HttpResponse<String> response = postPhoto(BuggyReaderPlugin.PIXELS_FAIL);
+
+            assertThat(response.statusCode()).isEqualTo(422);
+            assertThat(response.body()).startsWith("No QR code found in the photo");
+            assertThat(received).isEmpty();
+            assertThat(logged)
+                    .singleElement()
+                    .satisfies(
+                            record -> {
+                                assertThat(record.getLevel()).isEqualTo(Level.WARNING);
+                                assertThat(record.getThrown()).hasMessage("bug reading pixels");
+                            });
+        } finally {
+            SERVER_LOG.removeHandler(keep);
+        }
     }
 
     private void start(Function<String, ScanReply> onCardId) throws IOException {
@@ -380,6 +507,39 @@ class PhoneScanServerTest {
         return bytes.toByteArray();
     }
 
+    /** A white photo with a QR code of each text side by side. */
+    private static BufferedImage photoOfCodes(String... texts) {
+        int codeSize = 300;
+        int gap = 100;
+        BufferedImage photo =
+                new BufferedImage(
+                        gap + texts.length * (codeSize + gap),
+                        codeSize + 2 * gap,
+                        BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = photo.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, photo.getWidth(), photo.getHeight());
+        for (int i = 0; i < texts.length; i++) {
+            int left = gap + i * (codeSize + gap);
+            g.drawImage(StudentCards.qrCode(texts[i], codeSize), left, gap, null);
+        }
+        g.dispose();
+        return photo;
+    }
+
+    /** A real 10 by 10 PNG whose header says it is {@code width} by {@code height}. */
+    private static byte[] pngClaimingToBe(int width, int height) {
+        byte[] png = png(new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB));
+        // After the 8-byte signature comes the header chunk: length, "IHDR", width, height, ...
+        ByteBuffer bytes = ByteBuffer.wrap(png);
+        bytes.putInt(16, width);
+        bytes.putInt(20, height);
+        CRC32 checksum = new CRC32();
+        checksum.update(png, 12, 4 + 13);
+        bytes.putInt(29, (int) checksum.getValue());
+        return png;
+    }
+
     private static StudentData asha() {
         return new StudentData(
                 1001,
@@ -392,5 +552,110 @@ class PhoneScanServerTest {
                 "Enrolled",
                 "",
                 "DEMO-1001");
+    }
+
+    /** An image reader plugin with a bug, for files that start with its own made-up mark. */
+    private static final class BuggyReaderPlugin extends ImageReaderSpi {
+        static final byte[] READING_FAILS = mark("BUGGY-READING-FAILS");
+        static final byte[] PIXELS_FAIL = mark("BUGGY-PIXELS-FAIL");
+
+        BuggyReaderPlugin() {
+            vendorName = "tests";
+            version = "1";
+            names = new String[] {"buggy"};
+            inputTypes = new Class<?>[] {ImageInputStream.class};
+        }
+
+        @Override
+        public boolean canDecodeInput(Object input) throws IOException {
+            return startsWith(input, READING_FAILS) || startsWith(input, PIXELS_FAIL);
+        }
+
+        @Override
+        public ImageReader createReaderInstance(Object extension) {
+            return new BuggyReader(this);
+        }
+
+        @Override
+        public String getDescription(Locale locale) {
+            return "Image reader with a bug, for tests";
+        }
+
+        private static byte[] mark(String text) {
+            return text.getBytes(StandardCharsets.US_ASCII);
+        }
+
+        static boolean startsWith(Object input, byte[] mark) throws IOException {
+            ImageInputStream in = (ImageInputStream) input;
+            byte[] start = new byte[mark.length];
+            in.mark();
+            try {
+                in.readFully(start);
+                return Arrays.equals(start, mark);
+            } catch (EOFException shorterThanTheMark) {
+                return false;
+            } finally {
+                in.reset();
+            }
+        }
+    }
+
+    private static final class BuggyReader extends ImageReader {
+        BuggyReader(ImageReaderSpi plugin) {
+            super(plugin);
+        }
+
+        @Override
+        public BufferedImage read(int imageIndex, ImageReadParam param) throws IOException {
+            if (BuggyReaderPlugin.startsWith(getInput(), BuggyReaderPlugin.PIXELS_FAIL)) {
+                return new PhotoWhosePixelsCanNotBeRead();
+            }
+            throw new IllegalStateException("bug in the image reader");
+        }
+
+        @Override
+        public int getNumImages(boolean allowSearch) {
+            return 1;
+        }
+
+        @Override
+        public int getWidth(int imageIndex) {
+            return PhotoWhosePixelsCanNotBeRead.SIDE;
+        }
+
+        @Override
+        public int getHeight(int imageIndex) {
+            return PhotoWhosePixelsCanNotBeRead.SIDE;
+        }
+
+        @Override
+        public Iterator<ImageTypeSpecifier> getImageTypes(int imageIndex) {
+            int rgb = BufferedImage.TYPE_INT_RGB;
+            return List.of(ImageTypeSpecifier.createFromBufferedImageType(rgb)).iterator();
+        }
+
+        @Override
+        public IIOMetadata getStreamMetadata() {
+            return null;
+        }
+
+        @Override
+        public IIOMetadata getImageMetadata(int imageIndex) {
+            return null;
+        }
+    }
+
+    private static final class PhotoWhosePixelsCanNotBeRead extends BufferedImage {
+        static final int SIDE = 100;
+
+        PhotoWhosePixelsCanNotBeRead() {
+            super(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        }
+
+        @Override
+        public int[] getRGB(
+                int x, int y, int width, int height, int[] pixels, int offset, int scanWidth) {
+            throw new IllegalStateException("bug reading pixels");
+        }
     }
 }

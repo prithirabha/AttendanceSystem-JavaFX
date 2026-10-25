@@ -40,8 +40,8 @@ The rules, kept out of the controllers so they can be tested without a screen:
 - `AttendanceService.scan(cardId)` is the one entry point for every card reader. It checks the
   student in, or out if they have an open entry today, and ignores the same card again within 5
   seconds.
-- `StudentCards` draws a printable PNG card with the card ID as a QR code (ZXing), makes new IDs
-  like `STU-K7Q2MX9A`, and reads the ID back from a photo.
+- `StudentCards` draws a printable PNG card with the card ID as a QR code (ZXing) and makes new
+  IDs like `STU-K7Q2MX9A`.
 - `UserSession` (in the main package) remembers who logged in, so the dashboard can hide User
   Management from Employees.
 
@@ -52,8 +52,10 @@ Lets a phone act as a card reader:
 - `PhoneScanServer` runs the JDK's built-in HTTP server on a free port while "Use phone as
   scanner" is ticked. Every path starts with a random 128-bit token. `GET /<token>/` serves the
   phone page (`scanner/phone-page.html`); `POST /<token>/scan` takes a photo or a typed ID, reads
-  the QR code with `StudentCards.decode`, and hands the ID to the UI thread, which calls
+  the QR code with `QrPhotoReader`, checks the ID, and hands it to the UI thread, which calls
   `AttendanceService.scan`. The phone gets the same message the desktop shows.
+- `QrPhotoReader` returns every QR code in a photo. When ZXing reads nothing, it searches for the
+  fourth corner of a tilted card itself (see "Reading tilted photos" in `decisions.md`).
 - `ScanReply` is that answer: whether the scan worked, and the message.
 - `NetworkAddresses` lists the computer's local IPv4 addresses, so the pairing QR code holds an
   address the phone can reach. If there are several, the user picks one.
@@ -76,7 +78,7 @@ it and the title bar button maximizes it. The dashboard screens use anchors, an 
 |---|---|---|
 | service | `ValidationException` subclasses (`MissingFieldException`, `AlreadyExistsException`, `StillInUseException`, ...) | An error alert with the exception's message, written for the user |
 | scan field | `UnknownCardException`, other `ValidationException`s | The message in red under the scan field, no alert |
-| scanner | Bad token, a file that isn't a photo, no QR code, too large | 404, 415, 422 or 413 with a plain message on the phone |
+| scanner | Bad token, a bad card ID (typed or in the QR code), a file that isn't a photo, no QR code or several, a file or picture too large | 404, 400, 415, 422 or 413 with a plain message on the phone |
 | dao | `DataAccessException` | A "database error" alert; the app keeps running |
 | startup | `DatabaseSetupException` | JavaFX stops the launch and prints the cause. A friendlier dialog is a known gap |
 
@@ -88,7 +90,7 @@ Run all of them with `./mvnw verify`.
 |---|---|
 | `dao/*Test` | Each DAO against its own in-memory H2 with the real migrations: CRUD, not-found, duplicates, injection strings stored as plain text, closed connections |
 | `service/*Test` | Every validation rule and exception, every login outcome, photo copy and rejection, scan in/out/repeat, QR cards drawn and read back |
-| `scanner/*Test` | The phone server over real http: page, typed ID, card photo, wrong token, bad and oversized uploads, stop; address choice |
+| `scanner/*Test` | The phone server over real http: page, typed ID, card photo, wrong token, bad and oversized uploads, megapixel bombs, bad QR text, two cards, crashing image readers, stop; tilted and damaged QR codes; address choice |
 | `WindowFrameTest` | Which edges a press resizes, the size after a drag and its minimum, fitting the window on the screen |
 | `AppPathsTest`, `DatabaseSettingsTest`, `DatabaseMigrationsTest`, ... | Folder choice per OS, env variables, a fresh and an already-current database, a broken one |
 | `ui/*Test` (TestFX, tagged `ui`) | Login success and failure, form errors, course delete confirm/cancel, logout, the sidebar highlight, scanning a card, the phone pairing panel, resizing and maximizing the dashboard |

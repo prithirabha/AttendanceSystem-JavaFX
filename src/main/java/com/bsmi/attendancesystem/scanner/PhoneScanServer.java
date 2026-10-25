@@ -1,11 +1,8 @@
 package com.bsmi.attendancesystem.scanner;
 
-import com.bsmi.attendancesystem.service.StudentCards;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -20,13 +17,19 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 
 /**
  * A small web page that turns a phone into a card scanner: the phone photographs a student's QR
@@ -39,9 +42,13 @@ public final class PhoneScanServer implements AutoCloseable {
     /** Always the same unless another program has it, so a firewall can let this one port in. */
     public static final int USUAL_PORT = 8765;
     static final int MAX_PHOTO_BYTES = 15 * 1024 * 1024;
+    // A small file can still claim a huge picture and fill the memory when decoded. 64 megapixels
+    // lets in the 50 megapixel phone cameras, which save about 8192 by 6144
+    static final long MAX_PHOTO_PIXELS = 64_000_000;
     static final int MAX_CARD_ID_LENGTH = 64;
-    // Phone photos are 12 megapixels or more; this is plenty for a card and decodes fast
-    static final int MAX_DECODE_SIDE = 1600;
+    private static final Answer NOT_A_PHOTO =
+            new Answer(415, "That file is not a photo the app can read. Use JPEG or PNG");
+    private static final System.Logger LOG = System.getLogger(PhoneScanServer.class.getName());
     private static final int TOKEN_BYTES = 16;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String PAGE_RESOURCE = "phone-page.html";
@@ -146,25 +153,49 @@ public final class PhoneScanServer implements AutoCloseable {
         }
         String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
         if (contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("text/plain")) {
-            String typed = new String(body, StandardCharsets.UTF_8).strip();
-            if (typed.length() > MAX_CARD_ID_LENGTH) {
-                return new Answer(
-                        400, "A card ID is at most " + MAX_CARD_ID_LENGTH + " characters");
-            }
-            return askApp(typed);
+            return askAppIfCardId(new String(body, StandardCharsets.UTF_8).strip());
+        }
+        OptionalLong pixels = pixelsInPicture(body);
+        if (pixels.isEmpty()) {
+            return NOT_A_PHOTO;
+        }
+        if (pixels.getAsLong() > MAX_PHOTO_PIXELS) {
+            return new Answer(
+                    413, "The photo is over 64 megapixels. Take it again at a lower resolution");
         }
         Optional<BufferedImage> photo = readImage(body);
         if (photo.isEmpty()) {
-            return new Answer(415, "That file is not a photo the app can read. Use JPEG or PNG");
+            return NOT_A_PHOTO;
         }
-        Optional<String> cardId = StudentCards.decode(shrinkForDecoding(photo.get()));
-        if (cardId.isEmpty()) {
+        List<String> codes = codesIn(photo.get());
+        if (codes.isEmpty()) {
             return new Answer(
                     422,
                     "No QR code found in the photo. Hold the card flat, fill the frame and try"
                         + " again");
         }
-        return askApp(cardId.get());
+        if (codes.size() > 1) {
+            // Picking one could check in the wrong student
+            return new Answer(
+                    422,
+                    "The photo shows " + codes.size() + " QR codes. Photograph one card at a time");
+        }
+        return askAppIfCardId(codes.get(0));
+    }
+
+    /** Typed text and QR text both come from outside, so both get the same checks. */
+    private Answer askAppIfCardId(String text) {
+        return whyNotACardId(text).map(why -> new Answer(400, why)).orElseGet(() -> askApp(text));
+    }
+
+    private static Optional<String> whyNotACardId(String text) {
+        if (text.length() > MAX_CARD_ID_LENGTH) {
+            return Optional.of("A card ID is at most " + MAX_CARD_ID_LENGTH + " characters");
+        }
+        if (text.chars().anyMatch(Character::isISOControl)) {
+            return Optional.of("A card ID can't contain control characters");
+        }
+        return Optional.empty();
     }
 
     private Answer askApp(String cardId) {
@@ -189,32 +220,50 @@ public final class PhoneScanServer implements AutoCloseable {
         return null;
     }
 
+    /**
+     * Reads only the size written at the start of the file, without decoding the picture.
+     *
+     * @return width times height, or empty if no image reader knows the file
+     */
+    private static OptionalLong pixelsInPicture(byte[] bytes) {
+        try (ImageInputStream in =
+                new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                return OptionalLong.empty();
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                return OptionalLong.of((long) reader.getWidth(0) * reader.getHeight(0));
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException brokenHeader) {
+            return OptionalLong.empty();
+        }
+    }
+
     private static Optional<BufferedImage> readImage(byte[] bytes) {
         try {
             return Optional.ofNullable(ImageIO.read(new ByteArrayInputStream(bytes)));
-        } catch (IOException brokenImage) {
+        } catch (IOException | RuntimeException brokenImage) {
+            // Image readers are plugins, so a bug in one can throw anything on a crafted file
             return Optional.empty();
         }
     }
 
-    static BufferedImage shrinkForDecoding(BufferedImage photo) {
-        int longest = Math.max(photo.getWidth(), photo.getHeight());
-        if (longest <= MAX_DECODE_SIDE) {
-            return photo;
-        }
-        double scale = (double) MAX_DECODE_SIDE / longest;
-        int width = Math.max(1, (int) Math.round(photo.getWidth() * scale));
-        int height = Math.max(1, (int) Math.round(photo.getHeight() * scale));
-        BufferedImage smaller = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = smaller.createGraphics();
+    private static List<String> codesIn(BufferedImage photo) {
         try {
-            g.setRenderingHint(
-                    RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(photo, 0, 0, width, height, null);
-        } finally {
-            g.dispose();
+            return QrPhotoReader.codesIn(photo);
+        } catch (RuntimeException readerBug) {
+            // The phone hears "no QR code"; the log keeps what really happened
+            LOG.log(
+                    System.Logger.Level.WARNING,
+                    "Could not look for QR codes in a photo",
+                    readerBug);
+            return List.of();
         }
-        return smaller;
     }
 
     private static void sendText(HttpExchange exchange, int status, String text)
