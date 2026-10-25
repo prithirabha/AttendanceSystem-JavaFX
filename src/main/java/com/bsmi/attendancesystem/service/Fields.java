@@ -11,6 +11,13 @@ final class Fields {
         }
     }
 
+    /** Strong enough means long enough, with both uppercase and lowercase letters. */
+    static boolean isStrongPassword(String password, int minLength) {
+        return password.length() >= minLength
+                && password.chars().anyMatch(Character::isUpperCase)
+                && password.chars().anyMatch(Character::isLowerCase);
+    }
+
     static String trimmedOrEmpty(String value) {
         return value == null ? "" : value.strip();
     }

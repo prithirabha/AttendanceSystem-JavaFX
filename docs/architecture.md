@@ -7,8 +7,9 @@ services and DAOs. Each layer only calls the one below it.
 
 ## Startup and data folder
 
-- `AttendanceApplication.init()` runs `DatabaseMigrations.applyPending`, which lets Flyway create
-  or upgrade the schema. `start()` then loads the bundled Inter font and shows the login screen.
+- `AttendanceApplication.init()` first runs `PendingRestore.applyIfReady` (see "Backup and
+  restore" below), then `DatabaseMigrations.applyPending`, which lets Flyway create or upgrade
+  the schema. `start()` then loads the bundled Inter font and shows the login screen.
 - `AppPaths` picks the per-user data folder:
   - Windows: `%APPDATA%\AttendanceSystem`
   - macOS: `~/Library/Application Support/AttendanceSystem`
@@ -44,6 +45,23 @@ The rules, kept out of the controllers so they can be tested without a screen:
   IDs like `STU-K7Q2MX9A`.
 - `UserSession` (in the main package) remembers who logged in, so the dashboard can hide User
   Management from Employees.
+
+## Backup and restore
+
+- `Backup.write` asks H2 for a safe copy of the open database (`BackupDao.backupTo`, H2's
+  `BACKUP TO`), and zips it with the photos in `images/`. `BackupCipher` encrypts the zip while
+  it is written, into a temporary file next to the target that is moved into place only at the
+  end, so a failed backup leaves no half-written file.
+- `Backup.restore` decrypts and unpacks into `restore-pending/` in the data folder, and writes a
+  `complete` marker last. It refuses the whole file on a wrong password, a changed byte, a name
+  that isn't the database or a photo (which also blocks "zip slip", `../` names), more than 5 GB
+  unpacked, or a database newer than this app knows.
+- The open database file can't be swapped, so the app closes. On the next start,
+  `PendingRestore.applyIfReady` runs before anything opens the database: it moves the current
+  database and photos into `before-restore-<time>/` and the restored ones into their place. A
+  pending folder without the marker is an unfinished restore and is deleted. Flyway then
+  upgrades a backup from an older version as usual.
+- Both work only with the built-in H2 file; `requireBuiltInDatabase` refuses a database server.
 
 ## scanner
 

@@ -17,6 +17,11 @@ public final class Database {
         return new Database(DatabaseSettings.current());
     }
 
+    /** @return where the database is, e.g. to tell the built-in file from a server */
+    public String url() {
+        return settings.url();
+    }
+
     /**
      * @return a new connection; the caller closes it (use try-with-resources)
      * @throws DataAccessException if the database can't be reached

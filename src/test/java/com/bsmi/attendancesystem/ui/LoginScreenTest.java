@@ -50,20 +50,27 @@ class LoginScreenTest extends AppScreenTest {
     }
 
     @Test
-    void adminLandsOnTheDashboardWithUserManagement() {
+    void adminLandsOnTheDashboardWithUserManagementAndBackups() {
         logInAs("admin", "admin123");
         assertThat(alertText()).isEqualTo(LoginController.DEMO_PASSWORD_WARNING);
         pressAlertButton("OK");
 
         assertThat(lookup("#username").queryAs(Label.class).getText()).isEqualTo("admin");
         assertThat(lookup("#userManagement_btn").queryAs(Button.class).isVisible()).isTrue();
+        assertThat(lookup("#userManagement_backupBtn").queryAs(Button.class).isVisible()).isTrue();
+        assertThat(lookup("#userManagement_restoreBtn").queryAs(Button.class).isVisible())
+                .isTrue();
     }
 
     @Test
-    void employeeDoesNotSeeUserManagement() {
+    void employeeDoesNotSeeUserManagementOrBackups() {
         logInAndDismissWelcome("employee", "employee123");
 
         assertThat(lookup("#userManagement_btn").queryAs(Button.class).isVisible()).isFalse();
+        assertThat(lookup("#userManagement_backupBtn").queryAs(Button.class).isVisible())
+                .isFalse();
+        assertThat(lookup("#userManagement_restoreBtn").queryAs(Button.class).isVisible())
+                .isFalse();
     }
 
     @Test

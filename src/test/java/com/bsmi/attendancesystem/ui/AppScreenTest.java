@@ -1,5 +1,7 @@
 package com.bsmi.attendancesystem.ui;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.bsmi.attendancesystem.AppPaths;
 import com.bsmi.attendancesystem.AttendanceApplication;
 import com.bsmi.attendancesystem.UserSession;
@@ -16,10 +18,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxRobot;
 import org.testfx.api.FxToolkit;
+import org.testfx.util.WaitForAsyncUtils;
 
 /** Starts the real app on a fresh demo database for every test, then closes all its windows. */
 @UiTest
 abstract class AppScreenTest extends FxRobot {
+    private static final int MAX_CLOSE_ROUNDS = 5;
+    private static final long FX_TIMEOUT_MILLIS = 5_000;
+
     @TempDir Path dataFolder;
 
     @BeforeAll
@@ -46,9 +52,21 @@ abstract class AppScreenTest extends FxRobot {
 
     @AfterEach
     void closeApp() {
-        interact(() -> List.copyOf(Window.getWindows()).forEach(Window::hide));
+        // Hiding an alert lets the code that waited on it go on, and that can open a new window,
+        // e.g. the dashboard after the login alert. Left open, it would catch the next test's
+        // clicks, so hide again until nothing is showing.
+        for (int round = 0; round < MAX_CLOSE_ROUNDS && anyWindowShowing(); round++) {
+            interact(() -> List.copyOf(Window.getWindows()).forEach(Window::hide));
+            WaitForAsyncUtils.waitForFxEvents();
+        }
+        assertThat(anyWindowShowing()).as("windows left open after the test").isFalse();
         UserSession.end();
         System.clearProperty(AppPaths.HOME_OVERRIDE_PROPERTY);
+    }
+
+    private boolean anyWindowShowing() {
+        return WaitForAsyncUtils.waitForAsyncFx(
+                FX_TIMEOUT_MILLIS, () -> !Window.getWindows().isEmpty());
     }
 
     void logInAs(String username, String password) {

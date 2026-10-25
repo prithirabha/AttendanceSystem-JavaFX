@@ -2,7 +2,9 @@ package com.bsmi.attendancesystem.dao;
 
 import com.bsmi.attendancesystem.DatabaseMigrations;
 import com.bsmi.attendancesystem.DatabaseSettings;
+import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
@@ -19,6 +21,14 @@ public final class TestDatabases {
         DatabaseSettings settings =
                 new DatabaseSettings(
                         "jdbc:h2:mem:" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1", "admin", "admin");
+        DatabaseMigrations.applyPending(settings);
+        return new Database(settings);
+    }
+
+    /** @return a new database file in {@code dataFolder}, as the app keeps it, migrated */
+    public static Database migratedFile(Path dataFolder) {
+        DatabaseSettings settings =
+                new DatabaseSettings(DatabaseSettings.embeddedUrl(dataFolder), "admin", "admin");
         DatabaseMigrations.applyPending(settings);
         return new Database(settings);
     }
@@ -48,6 +58,16 @@ public final class TestDatabases {
         try (Connection connection = database.open();
                 Statement statement = connection.createStatement()) {
             statement.executeUpdate(sql);
+        }
+    }
+
+    /** @return the number in the first column of the first row, e.g. of a COUNT(*) */
+    public static long queryNumber(Database database, String sql) throws SQLException {
+        try (Connection connection = database.open();
+                Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery(sql)) {
+            result.next();
+            return result.getLong(1);
         }
     }
 }

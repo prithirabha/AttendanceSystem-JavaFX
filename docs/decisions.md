@@ -138,6 +138,28 @@ JDK modules, and the libraries sit beside it on the module path.
   Anyone on the same network who sees the pairing QR code could scan cards, so it is meant for a
   trusted Wi-Fi.
 
+## Backups: a separate password and chunked AES-GCM
+
+A backup holds every student's data, so it is locked with a password. It is its own backup
+password, not an admin login:
+
+- the app keeps logins only as one-way bcrypt hashes, so it has nothing to lock a file with
+- a backup should still open after a login password changes or that admin is deleted
+- it needs at least 12 characters, more than a login, because a stolen file can be guessed at
+  offline, with no login screen to slow the guessing down
+
+The format uses only what is built into Java, so it adds no dependency:
+
+- PBKDF2-HMAC-SHA256 with 600,000 rounds (the OWASP advice) turns the password into an AES-256
+  key, which makes each guess slow
+- the body is AES-GCM in 1 MiB chunks, so a backup with many photos never has to fit in memory
+- each chunk's nonce holds its number and a "last" flag, and the header is checked with every
+  chunk, so a changed, reordered or cut-off file fails like a wrong password does
+
+Not done, on purpose: a cloud upload (it would need accounts, a stored key and student data
+sent to an outside company; saving into a synced folder does the same) and automatic backups
+(only if people forget to use the button).
+
 ## Known gap: database work on the UI thread
 
 Every database call runs on the JavaFX application thread, the same thread that draws the

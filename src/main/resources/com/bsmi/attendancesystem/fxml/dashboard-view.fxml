@@ -416,6 +416,8 @@
                                     <PasswordField fx:id="userManagement_password" layoutX="169.0" layoutY="86.0" prefHeight="28.0" prefWidth="190.0" styleClass="textfield" stylesheets="@../css/dashboard-style.css" />
                                     <Label alignment="CENTER_RIGHT" prefHeight="28.0" prefWidth="150.0" fx:id="userManagement_id_label" layoutX="9.0" layoutY="14.0" text="User Id:" styleClass="text-emphasis" />
                                     <TextField prefHeight="28.0" fx:id="userManagement_id" disable="true" editable="false" layoutX="169.0" layoutY="14.0" prefWidth="190.0" promptText="Hidden Field" styleClass="textfield" stylesheets="@../css/dashboard-style.css" />
+                                    <Button fx:id="userManagement_backupBtn" layoutX="100.0" layoutY="420.0" mnemonicParsing="false" onAction="#userManagementBackupBtn_onAction" prefHeight="35.0" prefWidth="85.0" styleClass="btn-secondary" stylesheets="@../css/dashboard-style.css" text="Back up..." />
+                                    <Button fx:id="userManagement_restoreBtn" layoutX="196.0" layoutY="420.0" mnemonicParsing="false" onAction="#userManagementRestoreBtn_onAction" prefHeight="35.0" prefWidth="85.0" styleClass="btn-secondary" stylesheets="@../css/dashboard-style.css" text="Restore..." />
                                  </children>
                               </AnchorPane>
                               <AnchorPane layoutX="406.0" layoutY="18.0" prefHeight="529.0" prefWidth="480.0" AnchorPane.topAnchor="18.0" AnchorPane.leftAnchor="406.0" AnchorPane.rightAnchor="14.0" AnchorPane.bottomAnchor="25.0" stylesheets="@../css/dashboard-style.css">

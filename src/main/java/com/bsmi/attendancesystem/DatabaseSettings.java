@@ -12,7 +12,7 @@ public record DatabaseSettings(String url, String user, String password) {
     public static final String USER_VARIABLE = "ATTENDANCE_DB_USER";
     public static final String PASSWORD_VARIABLE = "ATTENDANCE_DB_PASSWORD";
 
-    static final String DATABASE_FILE_NAME = "attendance_system";
+    public static final String DATABASE_FILE_NAME = "attendance_system";
     static final String DEFAULT_USER = "admin";
     static final String DEFAULT_PASSWORD = "admin";
 
@@ -27,7 +27,8 @@ public record DatabaseSettings(String url, String user, String password) {
                 valueOrDefault(environment.get(PASSWORD_VARIABLE), DEFAULT_PASSWORD));
     }
 
-    static String embeddedUrl(Path dataDirectory) {
+    /** @return the url of the built-in database file in {@code dataDirectory} */
+    public static String embeddedUrl(Path dataDirectory) {
         // H2 accepts forward slashes on every OS; backslashes would need escaping in some tools
         String databaseFile =
                 dataDirectory.resolve(DATABASE_FILE_NAME).toAbsolutePath().toString().replace('\\', '/');

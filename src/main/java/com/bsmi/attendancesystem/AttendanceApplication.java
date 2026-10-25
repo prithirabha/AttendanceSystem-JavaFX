@@ -1,5 +1,6 @@
 package com.bsmi.attendancesystem;
 
+import com.bsmi.attendancesystem.service.PendingRestore;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -12,6 +13,8 @@ import java.io.IOException;
 public class AttendanceApplication extends Application {
     @Override
     public void init() {
+        // A restore chosen last time is swapped in before anything opens the database
+        PendingRestore.applyIfReady(AppPaths.dataDirectory());
         DatabaseMigrations.applyPending(DatabaseSettings.current());
     }
 

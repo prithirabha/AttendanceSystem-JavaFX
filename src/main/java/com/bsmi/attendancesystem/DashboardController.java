@@ -25,6 +25,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -41,6 +42,7 @@ import com.bsmi.attendancesystem.scanner.NetworkAddresses;
 import com.bsmi.attendancesystem.scanner.PhoneScanServer;
 import com.bsmi.attendancesystem.scanner.ScanReply;
 import com.bsmi.attendancesystem.service.AttendanceService;
+import com.bsmi.attendancesystem.service.Backup;
 import com.bsmi.attendancesystem.service.CourseService;
 import com.bsmi.attendancesystem.service.ImageStore;
 import com.bsmi.attendancesystem.service.NotSelectedException;
@@ -61,6 +63,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -292,6 +295,12 @@ public class DashboardController implements Initializable {
     private Button userManagement_clearBtn;
 
     @FXML
+    private Button userManagement_backupBtn;
+
+    @FXML
+    private Button userManagement_restoreBtn;
+
+    @FXML
     private TableColumn<UserData, Integer> userManagement_col_serialNum;
 
     @FXML
@@ -342,6 +351,8 @@ public class DashboardController implements Initializable {
 
     public void roleChecker() {
         userManagement_btn.setVisible(UserSession.isAdmin());
+        userManagement_backupBtn.setVisible(UserSession.isAdmin());
+        userManagement_restoreBtn.setVisible(UserSession.isAdmin());
     }
 
 //    START CODE FOR MINIMIZE BUTTON
@@ -1286,6 +1297,131 @@ public class DashboardController implements Initializable {
         showAlert(Alert.AlertType.INFORMATION, "Information Message", successMessage);
         userManagementShowListData();
         userManagementClearBtn_onAction();
+    }
+    private final Backup backup =
+            new Backup(Database.fromCurrentSettings(), AppPaths.dataDirectory());
+
+    @FXML
+    public void userManagementBackupBtn_onAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
+        try {
+            backup.requireBuiltInDatabase();
+            Optional<TypedPassword> typed = askBackupPassword(
+                    "Choose a password for the backup. Without it the backup can't be opened,"
+                            + " and it can't be recovered if lost.", true);
+            if (typed.isEmpty()) {
+                return;
+            }
+            Backup.requireStrong(typed.get().password(), typed.get().repeated());
+            FileChooser save = new FileChooser();
+            save.setTitle("Save Backup");
+            save.setInitialFileName("attendance-backup-" + LocalDate.now() + Backup.FILE_EXTENSION);
+            save.getExtensionFilters().add(BACKUP_FILES);
+            File file = save.showSaveDialog(main_form.getScene().getWindow());
+            if (file == null) {
+                return;
+            }
+            Path target = file.toPath();
+            runBackupTask(
+                    () -> backup.write(typed.get().password(), typed.get().repeated(), target),
+                    () -> showAlert(Alert.AlertType.INFORMATION, "Information Message",
+                            "Saved the backup to " + target));
+        } catch (ValidationException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
+        }
+    }
+    @FXML
+    public void userManagementRestoreBtn_onAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
+        try {
+            backup.requireBuiltInDatabase();
+            FileChooser open = new FileChooser();
+            open.setTitle("Restore Backup");
+            open.getExtensionFilters().add(BACKUP_FILES);
+            File file = open.showOpenDialog(main_form.getScene().getWindow());
+            if (file == null) {
+                return;
+            }
+            Optional<TypedPassword> typed =
+                    askBackupPassword("Type the password this backup was made with.", false);
+            if (typed.isEmpty()) {
+                return;
+            }
+            if (!confirmed("Restoring replaces all current students, attendance, photos and users"
+                    + " with the ones in the backup. The current data is kept in a before-restore"
+                    + " folder in the app's data folder. Restore now?")) {
+                return;
+            }
+            runBackupTask(
+                    () -> backup.restore(file.toPath(), typed.get().password()),
+                    () -> {
+                        showAlert(Alert.AlertType.INFORMATION, "Information Message",
+                                "Restored. The app closes now; open it again to see the restored"
+                                        + " data.");
+                        closeBtnOnAction();
+                    });
+        } catch (ValidationException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
+        }
+    }
+    private static final FileChooser.ExtensionFilter BACKUP_FILES =
+            new FileChooser.ExtensionFilter("Attendance backup", "*" + Backup.FILE_EXTENSION);
+
+    private record TypedPassword(String password, String repeated) {}
+
+    private Optional<TypedPassword> askBackupPassword(String explanation, boolean typedTwice) {
+        PasswordField password = new PasswordField();
+        password.setPromptText("Backup password");
+        PasswordField repeated = new PasswordField();
+        repeated.setPromptText("Type the password again");
+        VBox fields = new VBox(8, password);
+        if (typedTwice) {
+            fields.getChildren().add(repeated);
+        }
+        Dialog<TypedPassword> dialog = new Dialog<>();
+        dialog.initOwner(main_form.getScene().getWindow());
+        dialog.setTitle("Backup Password");
+        dialog.setHeaderText(explanation);
+        dialog.getDialogPane().setContent(fields);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.setResultConverter(button -> button == ButtonType.OK
+                ? new TypedPassword(password.getText(), repeated.getText())
+                : null);
+        Platform.runLater(password::requestFocus);
+        return dialog.showAndWait();
+    }
+    /** Backing up and restoring take seconds, so they run off the UI thread. */
+    private void runBackupTask(Runnable task, Runnable whenDone) {
+        userManagement_backupBtn.setDisable(true);
+        userManagement_restoreBtn.setDisable(true);
+        CompletableFuture.runAsync(task)
+                .whenComplete((ignored, failure) -> Platform.runLater(() -> {
+                    userManagement_backupBtn.setDisable(false);
+                    userManagement_restoreBtn.setDisable(false);
+                    if (failure == null) {
+                        whenDone.run();
+                    } else {
+                        showBackupFailure(failure instanceof CompletionException
+                                ? failure.getCause()
+                                : failure);
+                    }
+                }));
+    }
+    private void showBackupFailure(Throwable cause) {
+        if (cause instanceof ValidationException || cause instanceof UncheckedIOException) {
+            LOG.log(System.Logger.Level.WARNING, cause.getMessage(), cause);
+            showAlert(Alert.AlertType.ERROR, "Error Message", cause.getMessage());
+        } else if (cause instanceof DataAccessException e) {
+            showDatabaseError(e);
+        } else {
+            LOG.log(System.Logger.Level.ERROR, "Backup or restore failed", cause);
+            showAlert(Alert.AlertType.ERROR, "Error Message",
+                    "Something went wrong: " + cause.getMessage());
+        }
     }
     private boolean confirmed(String question) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);

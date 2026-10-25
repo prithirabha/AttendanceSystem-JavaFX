@@ -24,6 +24,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** Plays the phone: turns the scanner on, then sends card IDs the way the phone page does. */
 class PhoneScannerTest extends AppScreenTest {
@@ -130,7 +132,7 @@ class PhoneScannerTest extends AppScreenTest {
     }
 
     @Test
-    void turningItOffStopsThePhonePage() {
+    void turningItOffStopsThePhonePage() throws TimeoutException {
         clickOn(phoneScanner());
         URI page = reachablePage();
 
@@ -141,7 +143,7 @@ class PhoneScannerTest extends AppScreenTest {
     }
 
     @Test
-    void loggingOutStopsThePhonePage() {
+    void loggingOutStopsThePhonePage() throws TimeoutException {
         clickOn(phoneScanner());
         URI page = reachablePage();
 
@@ -163,7 +165,7 @@ class PhoneScannerTest extends AppScreenTest {
     }
 
     private HttpResponse<String> sendFromPhone(String cardId)
-            throws IOException, InterruptedException {
+            throws IOException, InterruptedException, TimeoutException {
         HttpRequest request =
                 HttpRequest.newBuilder(reachablePage().resolve("scan"))
                         .header("Content-Type", "text/plain; charset=utf-8")
@@ -177,7 +179,10 @@ class PhoneScannerTest extends AppScreenTest {
     }
 
     // The server listens on every network, so this computer's own address works on any test machine
-    private URI reachablePage() {
+    private URI reachablePage() throws TimeoutException {
+        // The click returns before the screen has always caught up, so wait for the address
+        WaitForAsyncUtils.waitFor(
+                5, TimeUnit.SECONDS, () -> !pageAddressField().getText().isEmpty());
         URI shown = URI.create(pageAddressField().getText());
         return URI.create("http://127.0.0.1:" + shown.getPort() + shown.getPath());
     }

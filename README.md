@@ -26,6 +26,8 @@ This repo continues it with an embedded database, tests, CI and card scanning.
   code with a phone on the same Wi-Fi, and photograph a student's QR card.
 - **User management** (Admin only): add, edit and delete users and set their role. Nobody can
   delete themselves, and the last Admin can't be removed or made an Employee.
+- **Backup and restore** (Admin only): save the database and photos into one password-locked
+  file, and restore it later or on another computer.
 
 | Login | Students | Courses |
 |---|---|---|
@@ -156,7 +158,8 @@ again.
   suite covers
 - [Database](docs/database.md): the tables, an ER diagram and the migrations
 - [Design decisions](docs/decisions.md): why H2 and not MySQL (and how to switch), why Flyway,
-  DAOs and bcrypt, card readers and the phone scanner, the UI design, and the known gaps
+  DAOs and bcrypt, card readers and the phone scanner, the backup format, the UI design, and the
+  known gaps
 - [Build and release](docs/build-and-release.md): what CI checks on every push, how a tag
   becomes the Linux, Windows and macOS downloads, and what could be improved
 
@@ -180,6 +183,27 @@ SQL files in `src/main/resources/db/migration`. To change the schema, add a new
 `V<next number>__<description>.sql` file there; never edit a file that has already been released.
 
 Earlier versions kept the database in the project's `data/` folder. That folder is no longer used.
+
+## Backing up and restoring
+
+An Admin can save the database and all student photos into one password-locked file, and load
+such a file back:
+
+- **Back up:** on Manage Users, click **Back up...**, type a backup password twice (at least 12
+  characters, with both uppercase and lowercase letters), and pick where to save the
+  `.attbackup` file. For a copy off this computer, save it into a folder that OneDrive,
+  Nextcloud or Syncthing keeps in sync.
+- **Restore:** on Manage Users, click **Restore...**, pick the file and type its password. The
+  app closes; open it again to use the restored data. On a new computer, log in with the demo
+  admin first.
+- **The backup password can't be recovered.** Without it the file can't be opened, so keep it
+  somewhere safe, such as a password manager.
+- A restore never deletes the data it replaces: it moves it into a `before-restore-<date-time>`
+  folder inside the data folder. Delete that folder once you're happy with the restored data.
+- A backup from a newer version of the app is refused; update the app first. A backup from an
+  older version is upgraded when it opens.
+- The buttons cover only the database built into the app. With `ATTENDANCE_DB_URL` set to a
+  database server, back that server up with its own tools.
 
 ## Running the tests
 

@@ -1,5 +1,6 @@
 package com.bsmi.attendancesystem.service;
 
+import static com.bsmi.attendancesystem.service.Fields.isStrongPassword;
 import static com.bsmi.attendancesystem.service.Fields.requireFilled;
 import static com.bsmi.attendancesystem.service.Fields.trimmedOrEmpty;
 
@@ -62,7 +63,7 @@ public final class UserService {
         if (!ROLES.contains(form.role())) {
             throw new InvalidValueException(ROLE, String.join(" or ", ROLES));
         }
-        if (!isStrong(form.password())) {
+        if (!isStrongPassword(form.password(), MIN_PASSWORD_LENGTH)) {
             throw new InvalidValueException(
                     PASSWORD,
                     "at least "
@@ -150,12 +151,6 @@ public final class UserService {
 
     private boolean isOnlyAdmin(UserData user) {
         return ADMIN.equals(user.getUserRole()) && users.countWithRole(ADMIN) == 1;
-    }
-
-    private static boolean isStrong(String password) {
-        return password.length() >= MIN_PASSWORD_LENGTH
-                && password.chars().anyMatch(Character::isUpperCase)
-                && password.chars().anyMatch(Character::isLowerCase);
     }
 
     private static String describe(String username) {
