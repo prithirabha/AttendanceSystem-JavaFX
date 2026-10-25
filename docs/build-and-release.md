@@ -66,10 +66,16 @@ The properties that change the result, all set with `-D` on the command line:
   `resourceDir`). jpackage's own scripts fail the whole install when `xdg-desktop-menu` is missing or
   finds no menu folder, as on a minimal system or in distrobox. Ours copy the menu entry into
   `/usr/share/applications` in that case.
-- The tar.gz holds `install.sh`, a menu entry and an icon from `packaging/linux`. `sudo ./install.sh`
-  installs to `/opt/AttendanceSystem`; without `sudo` it installs to `~/.local/opt/AttendanceSystem`.
-  Both write an `uninstall.sh` next to the app. The script only copies files, so it works on any
-  distro, and it warns when GTK 3, libgthread or libXtst is missing.
+- The tar.gz holds `install.sh`, `check-libraries.sh`, a menu entry and an icon from
+  `packaging/linux`. `sudo ./install.sh` installs to `/opt/AttendanceSystem`; without `sudo` it
+  installs to `~/.local/opt/AttendanceSystem`. Both write an `uninstall.sh` next to the app. The
+  script only copies files, so it works on any distro.
+- JavaFX needs GTK 3, libgthread and libXtst from the system; without one, Java stops with a stack
+  trace. `check-libraries.sh` looks for them with `ldconfig -p` and prints the install command for
+  each distro family. `install.sh` runs it and only warns. The AppImage's `AppRun` runs it before
+  Java and stops with the message, also in a zenity, kdialog or notify-send window when it's
+  started from the menu. With no `ldconfig` output (as on NixOS) the check passes, so a false
+  alarm never blocks the app. `check-libraries-test.sh` tests it with a stand-in `ldconfig`.
 - `build-appimage.sh` downloads `appimagetool` and the AppImage runtime at pinned versions and checks
   their SHA-256, so a changed download stops the build. Update both URLs and checksums together.
 - The Linux builds are x86-64 only. An ARM build would need an `ubuntu-24.04-arm` runner.

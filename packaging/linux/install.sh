@@ -51,16 +51,8 @@ echo "Attendance System is installed in $app_dir."
 echo "Start it from the app menu, or run: attendancesystem"
 echo "To remove it, run: $app_dir/uninstall.sh"
 
-# JavaFX draws its windows with these libraries, which every desktop has but a minimal system may not
-libraries=$(ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null || true)
-for library in libgtk-3.so.0 libgthread-2.0.so.0 libXtst.so.6; do
-    if ! printf '%s\n' "$libraries" | grep -qF "$library"; then
-        echo
-        echo "$library seems to be missing. Install it with your package manager, for example:"
-        echo "  Fedora: sudo dnf install gtk3 libXtst"
-        echo "  openSUSE: sudo zypper install libgtk-3-0 libgthread-2_0-0 libXtst6"
-        echo "  Arch: sudo pacman -S gtk3 libxtst"
-        echo "  Debian, Ubuntu: sudo apt install libgtk-3-0 libxtst6"
-        break
-    fi
-done
+# Only a warning here: the libraries can be installed after the app
+if ! message=$(sh "$source_dir/check-libraries.sh"); then
+    echo
+    echo "$message"
+fi

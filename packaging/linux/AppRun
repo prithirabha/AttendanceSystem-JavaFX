@@ -1,0 +1,23 @@
+#!/bin/sh
+# What the AppImage runs first. It checks the system libraries before starting Java, so a missing
+# one gives a message saying what to install instead of a stack trace.
+set -eu
+
+app_dir=$(dirname "$(readlink -f "$0")")
+
+# Started from the app menu there is no terminal, so the message also goes to a window when one
+# of these tools exists. zenity needs GTK itself, so if it fails the next one is tried.
+show_in_a_window() {
+    { command -v zenity >/dev/null &&
+        zenity --error --no-markup --title="Attendance System" --text="$1"; } ||
+        { command -v kdialog >/dev/null && kdialog --title "Attendance System" --error "$1"; } ||
+        { command -v notify-send >/dev/null && notify-send "Attendance System" "$1"; } ||
+        true
+}
+
+if ! message=$(sh "$app_dir/check-libraries.sh"); then
+    echo "$message" >&2
+    show_in_a_window "$message" 2>/dev/null
+    exit 1
+fi
+exec "$app_dir/bin/AttendanceSystem" "$@"

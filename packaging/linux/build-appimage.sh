@@ -12,6 +12,7 @@ runtime_sha256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
 
 app_folder=$1
 output_file=$2
+script_dir=$(cd "$(dirname "$0")" && pwd)
 work_dir=$(mktemp -d)
 trap 'rm -rf "$work_dir"' EXIT
 
@@ -21,10 +22,12 @@ printf '%s  %s\n' "$tool_sha256" "$work_dir/appimagetool" "$runtime_sha256" "$wo
     sha256sum -c --quiet
 chmod +x "$work_dir/appimagetool"
 
-# The AppImage starts AppRun and takes its menu entry and icon from the top of the folder
+# The AppImage starts AppRun and takes its menu entry and icon from the top of the folder.
+# AppRun checks the system libraries first, then starts the app.
 cp -R "$app_folder" "$work_dir/AppDir"
 rm -f "$work_dir/AppDir/install.sh"
-ln -s bin/AttendanceSystem "$work_dir/AppDir/AppRun"
+cp "$script_dir/AppRun" "$script_dir/check-libraries.sh" "$work_dir/AppDir/"
+chmod +x "$work_dir/AppDir/AppRun"
 
 # appimagetool is an AppImage itself; unpacking it first means it doesn't need FUSE on the runner
 APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 \

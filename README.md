@@ -121,7 +121,8 @@ changed. Logging in with a demo password shows a warning instead of "Login Succe
    Add Student screen. If the phone can't open the page, the computer's firewall is blocking it:
    allow TCP port 8765, for example `sudo firewall-cmd --permanent --add-port=8765/tcp` and
    `sudo firewall-cmd --reload` (Fedora), `sudo ufw allow 8765/tcp` (Ubuntu), or click **Allow**
-   when Windows asks.
+   when Windows asks. If the computer shares its own Wi-Fi hotspot, NetworkManager puts that
+   connection in firewalld's `nm-shared` zone, so add `--zone=nm-shared` to the first command.
 
 ## Using an RFID reader
 
