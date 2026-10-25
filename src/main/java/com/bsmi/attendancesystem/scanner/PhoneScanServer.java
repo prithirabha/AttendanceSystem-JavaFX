@@ -7,7 +7,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.BindException;
 import java.net.Inet4Address;
@@ -52,6 +51,13 @@ public final class PhoneScanServer implements AutoCloseable {
     private static final int TOKEN_BYTES = 16;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String PAGE_RESOURCE = "phone-page.html";
+    // Enough worker threads that a few slow or stalled connections can't hold up the real phone,
+    // but still a fixed number, so a flood can't make the app start unlimited threads
+    private static final int WORKER_THREADS = 8;
+    // A connection that stops sending or receiving for this long is closed, freeing its thread.
+    // Long enough for a whole 15 MB photo over slow Wi-Fi; photos are shrunk first, so a real
+    // upload finishes in well under a second
+    private static final int SLOW_CONNECTION_TIMEOUT_SECONDS = 60;
 
     private final HttpServer server;
     private final ExecutorService worker;
@@ -65,8 +71,9 @@ public final class PhoneScanServer implements AutoCloseable {
         this.token = HexFormat.of().formatHex(randomBytes(TOKEN_BYTES));
         this.page = readPage();
         this.worker =
-                Executors.newSingleThreadExecutor(
-                        Thread.ofPlatform().name("phone-scanner").daemon().factory());
+                Executors.newFixedThreadPool(
+                        WORKER_THREADS,
+                        Thread.ofPlatform().name("phone-scanner-", 0).daemon().factory());
     }
 
     /**
@@ -76,6 +83,7 @@ public final class PhoneScanServer implements AutoCloseable {
      */
     public static PhoneScanServer start(
             InetSocketAddress address, Function<String, ScanReply> onCardId) throws IOException {
+        limitSlowConnections();
         HttpServer server = HttpServer.create(address, 0);
         PhoneScanServer phoneScanner = new PhoneScanServer(server, onCardId);
         server.setExecutor(phoneScanner.worker);
@@ -208,16 +216,12 @@ public final class PhoneScanServer implements AutoCloseable {
     }
 
     /**
-     * @return the body, or null if it is longer than {@code limit} (the rest is read and dropped)
+     * @return the body, or null if it is longer than {@code limit}; the rest is left unread, so an
+     *     over-long body can't tie up the thread, and closing the exchange drops the connection
      */
     private static byte[] readAtMost(InputStream in, int limit) throws IOException {
         byte[] body = in.readNBytes(limit + 1);
-        if (body.length <= limit) {
-            return body;
-        }
-        // Reading the rest lets the phone finish sending, so it sees the answer instead of an error
-        in.transferTo(OutputStream.nullOutputStream());
-        return null;
+        return body.length <= limit ? body : null;
     }
 
     /**
@@ -285,6 +289,20 @@ public final class PhoneScanServer implements AutoCloseable {
                         + " connect-src 'self'; img-src blob:");
         exchange.sendResponseHeaders(status, body.length);
         exchange.getResponseBody().write(body);
+    }
+
+    // com.sun.net.httpserver reads these once, JVM-wide, when its first server is created, so a
+    // test can set a shorter time before then. Its timer closes a connection that goes quiet, so a
+    // half-sent request can't pin a worker thread for ever.
+    private static void limitSlowConnections() {
+        setPropertyIfUnset("sun.net.httpserver.maxReqTime", SLOW_CONNECTION_TIMEOUT_SECONDS);
+        setPropertyIfUnset("sun.net.httpserver.maxRspTime", SLOW_CONNECTION_TIMEOUT_SECONDS);
+    }
+
+    private static void setPropertyIfUnset(String property, int seconds) {
+        if (System.getProperty(property) == null) {
+            System.setProperty(property, Integer.toString(seconds));
+        }
     }
 
     private static byte[] randomBytes(int count) {

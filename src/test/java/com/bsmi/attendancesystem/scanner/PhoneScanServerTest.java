@@ -19,6 +19,7 @@ import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -346,6 +347,31 @@ class PhoneScanServerTest {
             assertThat(server.port()).isPositive().isNotEqualTo(first.port());
             assertThat(get(page()).statusCode()).isEqualTo(200);
         }
+    }
+
+    @Test
+    void oneStalledConnectionDoesNotStopTheServerAnswering() throws Exception {
+        start(checksEveryoneIn());
+        try (Socket stalled = new Socket()) {
+            stalled.connect(
+                    new InetSocketAddress(NetworkAddresses.thisComputerOnly(), server.port()));
+            // The start of a request and nothing more: a worker reading it would block here
+            stalled.getOutputStream().write("GET /".getBytes(StandardCharsets.US_ASCII));
+            stalled.getOutputStream().flush();
+
+            // On a single worker this would hang; here the real phone is still answered
+            assertThat(get(page()).statusCode()).isEqualTo(200);
+        }
+    }
+
+    @Test
+    void slowConnectionsAreGivenATimeoutSoTheyCanNotHoldAThreadForEver() throws Exception {
+        start(checksEveryoneIn());
+
+        // The server turns on the JDK's request and response timeouts, which close a connection
+        // that stops sending or receiving instead of letting it keep a worker thread
+        assertThat(System.getProperty("sun.net.httpserver.maxReqTime")).isNotNull();
+        assertThat(System.getProperty("sun.net.httpserver.maxRspTime")).isNotNull();
     }
 
     @Test

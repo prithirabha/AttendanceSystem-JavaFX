@@ -133,6 +133,8 @@ JDK modules, and the libraries sit beside it on the module path.
   - a photo with several QR codes is refused, as picking one could check in the wrong student
   - an image reader or QR reader that crashes on a crafted file gives a plain answer (415 or
     422), never a server error; the QR reader's crash is logged
+  - requests run on a small pool of threads, and a connection that stalls or sends an over-long
+    body is dropped after a timeout, so one bad connection can't block the scanner for everyone
   - it listens on port 8765, so a firewall rule can allow just that port. If another program has
     8765 it takes any free port, and the screen says that 8765 was busy and which port to allow
   - it can only check students in and out, never read or change other data
