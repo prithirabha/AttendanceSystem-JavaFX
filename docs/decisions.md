@@ -225,6 +225,23 @@ database when it is queried). Rebuilding the data into a fresh database would av
 costs far more code; refusing routines and triggers closes the way a backup could run code, which
 is the real risk.
 
+## Publishing attendance between sites
+
+Several computers (a library, a lab) can each run the app and publish their attendance as a CSV
+into one shared folder - a OneDrive, Nextcloud or Syncthing folder - so the files reach a central
+computer without a server. Each computer writes only its own file, named
+`attendance-<site>-<timestamp>.csv`, so two computers never write the same file and the sync tool
+never has a conflict to merge. The timestamp keeps every export instead of overwriting the last.
+
+The site name is kept on the computer, in a `site` file in the data folder, never in the database.
+If it were in the database, restoring the library's backup onto the lab would make the lab call
+itself "library". The `ATTENDANCE_SITE` environment variable overrides the file, and the host name
+is the default.
+
+Attendance is shared as CSV, not as a database file, on purpose: anything that reads these files
+reads only rows and never opens another computer's database, so the restore-trust risk (above)
+cannot reach a reader through a shared file.
+
 ## Known gap: database work on the UI thread
 
 Every database call runs on the JavaFX application thread, the same thread that draws the

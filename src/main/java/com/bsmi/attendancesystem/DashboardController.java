@@ -26,6 +26,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -47,6 +48,7 @@ import com.bsmi.attendancesystem.service.Backup;
 import com.bsmi.attendancesystem.service.CourseService;
 import com.bsmi.attendancesystem.service.ImageStore;
 import com.bsmi.attendancesystem.service.NotSelectedException;
+import com.bsmi.attendancesystem.service.SiteName;
 import com.bsmi.attendancesystem.service.StudentCards;
 import com.bsmi.attendancesystem.service.StudentService;
 import com.bsmi.attendancesystem.service.UserForm;
@@ -62,6 +64,7 @@ import java.net.Inet4Address;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -1218,6 +1221,47 @@ public class DashboardController implements Initializable {
         } catch (UncheckedIOException e) {
             showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
         }
+    }
+
+    /** Publishes this site's attendance as a timestamped CSV into a shared folder. */
+    @FXML
+    public void studentAttendanceShareBtnOnAction() {
+        Path dataFolder = AppPaths.dataDirectory();
+        String site = currentOrAskedSite(dataFolder);
+        if (site == null) {
+            return;
+        }
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Share attendance to a folder");
+        File folder = chooser.showDialog(main_form.getScene().getWindow());
+        if (folder == null) {
+            return;
+        }
+        try {
+            Path file = folder.toPath().resolve(SiteName.fileName(site, LocalDateTime.now()));
+            AttendanceCsv.save(List.copyOf(studentAttendance_tableView.getItems()), file);
+            showAlert(Alert.AlertType.INFORMATION, "Information Message",
+                    "Shared this site's attendance as " + file);
+        } catch (UncheckedIOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
+        }
+    }
+
+    /** The site name, asking for one (host name pre-filled) the first time; null if cancelled. */
+    private String currentOrAskedSite(Path dataFolder) {
+        if (!SiteName.isUnset(dataFolder)) {
+            return SiteName.current(dataFolder);
+        }
+        TextInputDialog dialog = new TextInputDialog(SiteName.current(dataFolder));
+        dialog.setTitle("Name this site");
+        dialog.setHeaderText(null);
+        dialog.setContentText("A short name for this computer's location (e.g. library, lab-2):");
+        var entered = dialog.showAndWait();
+        if (entered.isEmpty()) {
+            return null;
+        }
+        SiteName.save(dataFolder, entered.get());
+        return SiteName.current(dataFolder);
     }
 //    END CODE FOR STUDENT ATTENDANCE FORM
 
