@@ -1,6 +1,9 @@
 package com.bsmi.attendancesystem;
 
+import com.bsmi.attendancesystem.dao.Database;
+import com.bsmi.attendancesystem.dao.UserDao;
 import com.bsmi.attendancesystem.service.PendingRestore;
+import com.bsmi.attendancesystem.service.UserService;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -21,18 +24,21 @@ public class AttendanceApplication extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
         AppFonts.loadBundled();
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("fxml/login-view.fxml"));
-        Parent root = fxmlLoader.load();
+        // A fresh install has no accounts, so it opens the setup screen instead of login
+        boolean firstRun = needsFirstAdmin();
+        String view = firstRun ? "fxml/first-run-view.fxml" : "fxml/login-view.fxml";
+        Parent root = FXMLLoader.load(getClass().getResource(view));
         Scene scene = new Scene(root);
 
-        // Apply transparent style to the stage
         primaryStage.initStyle(StageStyle.TRANSPARENT);
-
-        // Set the scene and show the stage
         primaryStage.setScene(scene);
         WindowFrame.makeMovable(primaryStage);
-        primaryStage.setTitle("Login | Attendance System");
+        primaryStage.setTitle((firstRun ? "Set up" : "Login") + " | Attendance System");
         primaryStage.show();
+    }
+
+    private static boolean needsFirstAdmin() {
+        return new UserService(new UserDao(Database.fromCurrentSettings())).needsFirstAdmin();
     }
 
     public static void main(String[] args) {

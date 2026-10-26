@@ -66,12 +66,30 @@ fail. A real install whose passwords were changed shows nothing.
   "other accounts that still have a weak password" would hand an attacker a list.
 - An account renamed but still on a demo password is caught after login instead: the success
   message becomes a warning to change it.
-- There is no forced password change or first-start wizard; both would mean new screens for a risk
-  the hint and the warning already cover.
+- When the database has no accounts at all (a fresh install), the app opens a one-time setup
+  screen that creates the first Admin (see *First-time setup* below). There is still no forced
+  password change for an account that already exists: the hint and the after-login warning cover a
+  demo password that lingers.
 
 The H2 database itself also has a user and password (`admin` / `admin`). Those stay as they are:
 the database file isn't encrypted, so anyone who can copy it can read it without them. Keeping the
 data folder private is what protects it.
+
+## First-time setup: the first administrator
+
+A fresh install starts with an empty database and no accounts, so there is no one to log in as.
+The app notices this at start (no users at all) and opens a one-time setup screen that asks for a
+username and password and creates the first administrator. After that it hands over to the normal
+login screen.
+
+Creating a user normally needs an Admin already logged in. The first admin is the one exception,
+so the method that makes it runs only while the database has no users; once any account exists, it
+refuses. That keeps the Admin-only rule on every other way of adding a user.
+
+The new account is always an Admin, whatever the form said, and its password must pass the same
+strength check as any other. There is still no separate "demo or real" choice or forced password
+change: the setup screen exists only so a fresh install has a safe way to make its first account
+instead of shipping one that everybody knows.
 
 ## jpackage installers
 

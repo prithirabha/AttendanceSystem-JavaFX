@@ -47,6 +47,11 @@ public final class UserService {
         return users.findAll();
     }
 
+    /** @return true when there are no users yet, so the app must create the first Admin */
+    public boolean needsFirstAdmin() {
+        return users.isEmpty();
+    }
+
     /**
      * Lets the UI check the form before asking the user to confirm.
      *
@@ -96,6 +101,30 @@ public final class UserService {
             throw new AlreadyExistsException(describe(username));
         }
         users.add(username, passwords.hash(form.password()), form.role());
+    }
+
+    /**
+     * Creates the very first administrator, the only user that can be added without an Admin
+     * already logged in. Allowed only while no user exists, so it can't be used later to slip
+     * past the Admin-only rule on {@link #add}. The role is always Admin, whatever the form says.
+     *
+     * @throws NotAllowedException if any user already exists
+     * @throws MissingFieldException naming the first empty field
+     * @throws InvalidValueException if the username is too long, or the password is weak or
+     *     mistyped
+     */
+    public void createFirstAdmin(UserForm form) {
+        if (!users.isEmpty()) {
+            throw new NotAllowedException("The first administrator has already been created");
+        }
+        UserForm adminForm =
+                new UserForm(
+                        null, form.username(), form.password(), form.confirmPassword(), ADMIN);
+        requireValid(adminForm);
+        users.add(
+                trimmedOrEmpty(adminForm.username()),
+                passwords.hash(adminForm.password()),
+                ADMIN);
     }
 
     /**

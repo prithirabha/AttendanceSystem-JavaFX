@@ -92,6 +92,19 @@ public final class UserDao {
         }
     }
 
+    /** @return true when no user exists yet, e.g. a fresh install before the first Admin */
+    public boolean isEmpty() {
+        String sql = "SELECT COUNT(*) FROM admin";
+        try (Connection connection = database.open();
+                PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet rows = statement.executeQuery()) {
+            rows.next();
+            return rows.getInt(1) == 0;
+        } catch (SQLException e) {
+            throw new DataAccessException("count the users", e);
+        }
+    }
+
     /**
      * @throws DataAccessException also when the username is taken or a value breaks a column
      *     rule, e.g. an unknown role

@@ -61,6 +61,42 @@ class UserServiceTest {
     }
 
     @Test
+    void needsFirstAdminOnlyWhenNoUserExists() throws SQLException {
+        assertThat(service.needsFirstAdmin()).isFalse();
+
+        TestDatabases.execute(database, "DELETE FROM admin");
+
+        assertThat(service.needsFirstAdmin()).isTrue();
+    }
+
+    @Test
+    void createFirstAdminAddsAnAdminToAnEmptyDatabase() throws SQLException {
+        TestDatabases.execute(database, "DELETE FROM admin");
+
+        service.createFirstAdmin(new UserForm(null, "  boss ", STRONG, STRONG, "Employee"));
+
+        UserData created = service.listAll().get(0);
+        assertThat(created.getUserName()).isEqualTo("boss");
+        assertThat(created.getUserRole()).isEqualTo(UserService.ADMIN);
+        assertThat(storedPasswordIs("boss", STRONG)).isTrue();
+    }
+
+    @Test
+    void createFirstAdminIsRefusedOnceAUserExists() {
+        assertThatThrownBy(() -> service.createFirstAdmin(newUser("boss", UserService.ADMIN)))
+                .isInstanceOf(NotAllowedException.class);
+    }
+
+    @Test
+    void createFirstAdminStillChecksTheForm() throws SQLException {
+        TestDatabases.execute(database, "DELETE FROM admin");
+        UserForm weak = new UserForm(null, "boss", "weak", "weak", UserService.ADMIN);
+
+        assertThatThrownBy(() -> service.createFirstAdmin(weak))
+                .isInstanceOf(InvalidValueException.class);
+    }
+
+    @Test
     void addStoresTrimmedUsernameAndHashedPassword() {
         service.add(newUser("  clerk ", "Employee"), actingAdmin);
 
