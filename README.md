@@ -9,6 +9,25 @@ This repo continues it with an embedded database, tests, CI and card scanning.
 
 ![Dashboard](docs/screenshots/home.png)
 
+## Contents
+
+- [Features](#features)
+- [Try it](#try-it)
+- [Using an RFID reader](#using-an-rfid-reader)
+- [Viewing several sites together](#viewing-several-sites-together)
+- [Tech stack](#tech-stack)
+- [Docs](#docs)
+- [Where the data is stored](#where-the-data-is-stored)
+- [Backing up and restoring](#backing-up-and-restoring)
+- [Running the tests](#running-the-tests)
+- [Building a version that runs without Java](#building-a-version-that-runs-without-java)
+- [Publishing a release](#publishing-a-release)
+- [Checking for dependency updates](#checking-for-dependency-updates)
+- [Editing the screens in SceneBuilder](#editing-the-screens-in-scenebuilder)
+- [License](#license)
+- [Maintainer](#maintainer)
+- [Contributors](#contributors)
+
 ## Features
 
 - **Login** with two roles. Passwords are stored as bcrypt hashes. An *Admin* can manage users;
@@ -211,6 +230,24 @@ such a file back:
   older version is upgraded when it opens.
 - The buttons cover only the database built into the app. With `ATTENDANCE_DB_URL` set to a
   database server, back that server up with its own tools.
+
+## Viewing several sites together
+
+Several computers can each run the app - one in the library, one in a lab - and their attendance
+can be viewed together on one computer, without a server.
+
+**On each site**, open **Attendance** and click **Share to folder...**. Pick a folder a sync tool
+(OneDrive, Nextcloud, Syncthing) keeps in sync between the computers. The app writes that site's
+attendance as `attendance-<site>-<date-time>.csv`. The first time, it asks for a short name for
+the computer, with the host name filled in; set `ATTENDANCE_SITE` to choose the name without being
+asked. Each computer only ever writes its own file, so the sync tool never has a conflict to merge.
+
+**On the central computer**, an Admin opens **Attendance** and clicks **Combined view...**, then
+picks that shared folder. A window opens with one tab per site, each showing that site's latest
+attendance, read only. **Refresh** re-reads the folder.
+
+Only the CSV files are read, never another computer's database, so a shared file can never run
+code on the central computer.
 
 ## Running the tests
 

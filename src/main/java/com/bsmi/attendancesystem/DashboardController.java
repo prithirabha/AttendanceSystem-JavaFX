@@ -257,6 +257,9 @@ public class DashboardController implements Initializable {
     private Button studentAttendance_markExitBtn;
 
     @FXML
+    private Button studentAttendance_combinedBtn;
+
+    @FXML
     private TextField studentAttendance_search;
 
     @FXML
@@ -357,6 +360,7 @@ public class DashboardController implements Initializable {
         userManagement_btn.setVisible(UserSession.isAdmin());
         userManagement_backupBtn.setVisible(UserSession.isAdmin());
         userManagement_restoreBtn.setVisible(UserSession.isAdmin());
+        studentAttendance_combinedBtn.setVisible(UserSession.isAdmin());
     }
 
 //    START CODE FOR MINIMIZE BUTTON
@@ -1262,6 +1266,25 @@ public class DashboardController implements Initializable {
         }
         SiteName.save(dataFolder, entered.get());
         return SiteName.current(dataFolder);
+    }
+
+    /** Opens the read-only view of the attendance other sites published (Admin only). */
+    @FXML
+    public void studentAttendanceCombinedBtnOnAction() {
+        if (!UserSession.isAdmin()) {
+            return;
+        }
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Open the shared attendance folder");
+        File folder = chooser.showDialog(main_form.getScene().getWindow());
+        if (folder == null) {
+            return;
+        }
+        try {
+            CombinedAttendanceWindow.open(main_form.getScene().getWindow(), folder.toPath());
+        } catch (UncheckedIOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Message", e.getMessage());
+        }
     }
 //    END CODE FOR STUDENT ATTENDANCE FORM
 
