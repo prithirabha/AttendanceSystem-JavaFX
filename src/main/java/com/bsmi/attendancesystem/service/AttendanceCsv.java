@@ -26,7 +26,8 @@ public final class AttendanceCsv {
     // Tells Excel the file is UTF-8; without it Excel garbles names with non-English letters
     static final char BYTE_ORDER_MARK = '\uFEFF';
 
-    private static final String FORMULA_STARTS = "=+-@\t\r";
+    // Shared with AttendanceCsvReader, which strips this guard back off when reading
+    static final String FORMULA_STARTS = "=+-@\t\r";
     private static final String CHARACTERS_THAT_NEED_QUOTES = ",\"\r\n";
 
     private AttendanceCsv() {}
