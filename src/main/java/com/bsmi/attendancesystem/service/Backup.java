@@ -22,6 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -63,6 +67,8 @@ public final class Backup {
     static final String NEWER_DATABASE =
             "This backup is from a newer version of the app. Update the app first, then restore"
                     + " it.";
+    static final String PROGRAM_CODE =
+            "This backup's database contains program code, so it was not restored.";
 
     private static final System.Logger LOG = System.getLogger(Backup.class.getName());
     private static final String PHOTO_ENTRY_PREFIX = IMAGES_FOLDER + "/";
@@ -178,7 +184,8 @@ public final class Backup {
      * Unpacks and checks the backup into the pending folder; the next start swaps it in.
      *
      * @throws ValidationException if the database is a server, the password is empty or wrong,
-     *     or the file is damaged, holds unexpected files, is too big or is from a newer app
+     *     or the file is damaged, holds unexpected files or program code, is too big, or is
+     *     from a newer app
      * @throws DataAccessException if the current database version can't be read
      * @throws UncheckedIOException if the files can't be read or written
      */
@@ -199,6 +206,7 @@ public final class Backup {
                 // Reading to the end runs the check on the last chunk, catching a cut-off file
                 plain.transferTo(OutputStream.nullOutputStream());
             }
+            refuseIfDatabaseRunsCode(pending);
             Files.createFile(pending.resolve(COMPLETE_MARKER));
         } catch (ZipException | EOFException unlockedButNotAZip) {
             discard(pending);
@@ -210,6 +218,37 @@ public final class Backup {
         } catch (RuntimeException e) {
             discard(pending);
             throw e;
+        }
+    }
+
+    /**
+     * Opens the just-unpacked database read-only and refuses it if it carries any user-defined
+     * routine or trigger. The app's own schema has none, so a real backup always passes; a
+     * crafted one that would run code when the app next writes to it is caught here, before the
+     * next start swaps it in. Reading the metadata does not run the code.
+     */
+    private void refuseIfDatabaseRunsCode(Path pending) {
+        try (Connection connection = database.openReadOnlyFile(pending);
+                Statement statement = connection.createStatement()) {
+            if (userDefinedRoutinesOrTriggers(statement) > 0) {
+                throw new UnreadableBackupException(PROGRAM_CODE);
+            }
+        } catch (SQLException | DataAccessException cannotRead) {
+            // A genuine backup always opens and reads; a damaged one does not
+            throw new UnreadableBackupException(
+                    UnreadableBackupException.WRONG_PASSWORD_OR_DAMAGED);
+        }
+    }
+
+    private static long userDefinedRoutinesOrTriggers(Statement statement) throws SQLException {
+        return count(statement, "INFORMATION_SCHEMA.ROUTINES")
+                + count(statement, "INFORMATION_SCHEMA.TRIGGERS");
+    }
+
+    private static long count(Statement statement, String table) throws SQLException {
+        try (ResultSet row = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {
+            row.next();
+            return row.getLong(1);
         }
     }
 

@@ -164,6 +164,31 @@ Not done, on purpose: a cloud upload (it would need accounts, a stored key and s
 sent to an outside company; saving into a synced folder does the same) and automatic backups
 (only if people forget to use the button).
 
+## Restoring a backup only trusts its data, not code
+
+A backup to restore is a file from outside the computer, so the restore treats it as untrusted.
+An H2 database can store runnable code: an *alias* (a small Java function) or a *trigger*. If the
+app simply opened a database that held such code, the code would run the next time the app wrote
+a row — enough for a crafted backup file to take over the computer.
+
+So before a restored database is ever swapped in, the restore opens it **read-only** (which never
+runs that code) and refuses it if it holds any user-defined routine or trigger. The app's own
+schema has none — only plain tables and auto-numbered ids — so a real backup always passes, and a
+crafted one is caught. Listing the routines and triggers does not run them; only an insert or a
+query would, and the restore does neither.
+
+A detail worth recording, because it surprised us: whether a trigger can run at all depends on how
+the app is started. In the released app, which runs as a Java module, H2 can neither compile an
+inline-Java trigger nor build a trigger from one of the app's own classes (the module system
+blocks it), so triggers only bite when the app runs on a plain classpath, as it does in
+development. An alias, whose code can stand on its own, runs either way. The check refuses both, so
+it holds whichever way the app is launched.
+
+Known limit: this refuses stored code, not an H2 "linked table" (which reaches out to another
+database when it is queried). Rebuilding the data into a fresh database would avoid even that, but
+costs far more code; refusing routines and triggers closes the way a backup could run code, which
+is the real risk.
+
 ## Known gap: database work on the UI thread
 
 Every database call runs on the JavaFX application thread, the same thread that draws the

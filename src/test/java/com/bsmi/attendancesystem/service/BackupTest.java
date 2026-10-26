@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bsmi.attendancesystem.DatabaseSettings;
 import com.bsmi.attendancesystem.dao.BackupDao;
 import com.bsmi.attendancesystem.dao.Database;
 import com.bsmi.attendancesystem.dao.TestDatabases;
@@ -240,18 +241,18 @@ class BackupTest {
     }
 
     @Test
-    void backupFromAnOlderDatabaseVersionIsRestored() throws IOException {
-        Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, DATABASE_BYTES)), 1);
+    void backupFromAnOlderDatabaseVersionIsRestored() throws IOException, SQLException {
+        Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, realDatabaseBytes())), 1);
 
         backup.restore(file, PASSWORD);
 
-        assertThat(pending.resolve(PendingRestore.DATABASE_FILE)).hasBinaryContent(DATABASE_BYTES);
+        assertThat(pending.resolve(PendingRestore.COMPLETE_MARKER)).exists();
     }
 
     @Test
-    void imagesFolderEntryIsAllowed() throws IOException {
+    void imagesFolderEntryIsAllowed() throws IOException, SQLException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
-        entries.put(PendingRestore.DATABASE_FILE, DATABASE_BYTES);
+        entries.put(PendingRestore.DATABASE_FILE, realDatabaseBytes());
         entries.put("images/", new byte[0]);
         entries.put("images/" + PHOTO, PHOTO_BYTES);
 
@@ -371,6 +372,43 @@ class BackupTest {
         assertThat(pending).doesNotExist();
     }
 
+    @Test
+    void backupWhoseDatabaseRunsCodeIsRefused() throws IOException, SQLException {
+        byte[] withAlias =
+                realDatabaseBytes(
+                        "CREATE ALIAS add_one AS $$ int addOne(int x) { return x + 1; } $$");
+        Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, withAlias)));
+
+        assertThatThrownBy(() -> backup.restore(file, PASSWORD))
+                .isInstanceOf(UnreadableBackupException.class)
+                .hasMessage(Backup.PROGRAM_CODE);
+        assertThat(pending).doesNotExist();
+    }
+
+    @Test
+    void backupWhoseDatabaseHasATriggerIsRefused() throws IOException, SQLException {
+        byte[] withTrigger =
+                realDatabaseBytes(
+                        "CREATE TRIGGER on_insert BEFORE INSERT ON student FOR EACH ROW CALL"
+                                + " \"com.bsmi.attendancesystem.service.NoOpTrigger\"");
+        Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, withTrigger)));
+
+        assertThatThrownBy(() -> backup.restore(file, PASSWORD))
+                .isInstanceOf(UnreadableBackupException.class)
+                .hasMessage(Backup.PROGRAM_CODE);
+        assertThat(pending).doesNotExist();
+    }
+
+    @Test
+    void backupWhoseDatabaseWillNotOpenCountsAsDamaged() throws IOException {
+        Path file = encrypted(zipOf(Map.of(PendingRestore.DATABASE_FILE, DATABASE_BYTES)));
+
+        assertThatThrownBy(() -> backup.restore(file, PASSWORD))
+                .isInstanceOf(UnreadableBackupException.class)
+                .hasMessage(UnreadableBackupException.WRONG_PASSWORD_OR_DAMAGED);
+        assertThat(pending).doesNotExist();
+    }
+
     private Path writtenBackup() {
         Path file = tempDir.resolve("school" + Backup.FILE_EXTENSION);
         backup.write(PASSWORD, PASSWORD, file);
@@ -389,6 +427,16 @@ class BackupTest {
             out.write(plain);
         }
         return file;
+    }
+
+    /** @return the bytes of a real migrated database file, after running any extra statements */
+    private byte[] realDatabaseBytes(String... statements) throws IOException, SQLException {
+        Path folder = Files.createTempDirectory(tempDir, "inner");
+        Database inner = TestDatabases.migratedFile(folder);
+        for (String statement : statements) {
+            TestDatabases.execute(inner, statement);
+        }
+        return Files.readAllBytes(folder.resolve(DatabaseSettings.DATABASE_FILE_NAME + ".mv.db"));
     }
 
     private static byte[] zipOf(Map<String, byte[]> entries) throws IOException {

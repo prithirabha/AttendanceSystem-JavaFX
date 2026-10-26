@@ -150,13 +150,16 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.6.0</version>
         <configuration>
-          <!-- TestFX sets up the JavaFX toolkit through these internal classes -->
+          <!-- TestFX sets up the JavaFX toolkit through these internal classes; the final line
+               lets one BackupTest plant a trigger in a throwaway database, which H2 can only
+               instantiate when the package is open to it (the app itself never opens it) -->
           <argLine>@{argLine}
             --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
             --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
             --enable-native-access=javafx.graphics
             --add-modules java.net.http
-            --add-reads com.bsmi.attendancesystem=java.net.http</argLine>
+            --add-reads com.bsmi.attendancesystem=java.net.http
+            --add-opens com.bsmi.attendancesystem/com.bsmi.attendancesystem.service=com.h2database</argLine>
         </configuration>
       </plugin>
       <plugin>
