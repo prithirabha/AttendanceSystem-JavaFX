@@ -44,12 +44,9 @@ The apps aren't signed yet, so the first start shows a warning about an unknown 
 
 ### Logging in
 
-The first start creates a database with demo data. Log in as `admin` / `admin123`, open
-**Attendance**, type `DEMO-1001` and press Enter to check a student in. Updating to a new version
-keeps your data.
-
-Before real use, change the demo passwords on **Manage Users**. The login hint disappears once
-both are changed.
+The first start creates an empty database and asks you to create the administrator account: pick
+a username and a password. There are no default passwords, so there is nothing anyone can look up.
+Log in with the account you just made. Updating to a new version keeps your data.
 
 ### Checking a download
 
