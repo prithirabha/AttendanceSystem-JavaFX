@@ -12,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
-import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +20,7 @@ import org.mindrot.jbcrypt.BCrypt;
 
 class DatabaseMigrationsTest {
     private static final int MIGRATION_COUNT = 3;
+    private static final int SCHEMA_MIGRATION_COUNT = 2;
 
     private DatabaseSettings settings;
 
@@ -180,17 +180,29 @@ class DatabaseMigrationsTest {
     }
 
     @Test
-    void cardIdsAreAddedToADatabaseThatIsAtV2() throws SQLException {
-        Flyway.configure()
-                .dataSource(settings.url(), settings.user(), settings.password())
-                .locations(DatabaseMigrations.MIGRATIONS_LOCATION)
-                .target("2")
-                .load()
-                .migrate();
-        execute("UPDATE student SET firstName = 'Kept' WHERE studentNum = 1001");
+    void withoutDemoDataTheSchemaStartsEmpty() throws SQLException {
+        assertThat(DatabaseMigrations.applyPending(settings, false))
+                .isEqualTo(SCHEMA_MIGRATION_COUNT);
 
-        assertThat(DatabaseMigrations.applyPending(settings)).isEqualTo(1);
-        assertThat(count("SELECT COUNT(*) FROM student WHERE firstName = 'Kept'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM admin")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM student")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM student_attendance")).isZero();
+    }
+
+    @Test
+    void theEmptySchemaStillHasTheCardIdColumn() throws SQLException {
+        DatabaseMigrations.applyPending(settings, false);
+
+        // Selecting the column would throw if the schema migration had not added it
+        assertThat(count("SELECT COUNT(card_id) FROM student")).isZero();
+    }
+
+    @Test
+    void demoDataAddsAccountsStudentsAndCards() throws SQLException {
+        assertThat(DatabaseMigrations.applyPending(settings, true)).isEqualTo(MIGRATION_COUNT);
+
+        assertThat(count("SELECT COUNT(*) FROM admin WHERE username = 'admin'")).isOne();
+        assertThat(count("SELECT COUNT(*) FROM student")).isPositive();
         assertThat(count("SELECT COUNT(*) FROM student WHERE card_id = 'DEMO-' || studentNum"))
                 .isEqualTo(6);
     }

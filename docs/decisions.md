@@ -57,10 +57,12 @@ A fast hash like SHA-256 would be the wrong tool here, because speed helps the a
 
 ## The demo login hint
 
-Every release ships the demo logins, and the README prints them. The login screen shows a hint
-with them, but only those that still work: when it opens, it tries `admin` / `admin123` and
-`employee` / `employee123` in the background (bcrypt is slow on purpose) and hides the lines that
-fail. A real install whose passwords were changed shows nothing.
+A build from source starts with demo data and so with two known logins; the README prints them.
+Releases ship without demo data (see *Demo data is development-only*), so a real install has none
+to begin with. While they exist, the login screen shows a hint with only those that still work:
+when it opens, it tries `admin` / `admin123` and `employee` / `employee123` in the background
+(bcrypt is slow on purpose) and hides the lines that fail. A real install, or one whose passwords
+were changed, shows nothing.
 
 - The hint only ever tries those two usernames. It shows before anyone has logged in, so listing
   "other accounts that still have a weak password" would hand an attacker a list.
@@ -74,6 +76,22 @@ fail. A real install whose passwords were changed shows nothing.
 The H2 database itself also has a user and password (`admin` / `admin`). Those stay as they are:
 the database file isn't encrypted, so anyone who can copy it can read it without them. Keeping the
 data folder private is what protects it.
+
+## Demo data is development-only
+
+The demo students, courses and logins are not part of the schema. The schema migrations in
+`db/migration` create only empty tables, so a release starts with nothing in it. The demo data
+lives in a second folder, `db/demo`, and the app adds that folder to Flyway only when it is started
+with `-Dattendance.demo=true`. `mvn javafx:run` and the tests set it; a packaged release never
+does, so it ships empty and the first-run setup screen creates the administrator.
+
+The demo data is a Flyway *repeatable* migration (`R__demo_data.sql`): it has no version, so it
+never changes the schema version that backups compare against, and Flyway runs it once after the
+versioned schema files (and again only if it changes).
+
+This replaces the earlier plan of shipping the demo logins and only hinting at them. Shipping no
+account at all is the stronger fix for default credentials; the hint and the after-login warning
+stay on for a build from source, where the demo logins still exist.
 
 ## First-time setup: the first administrator
 

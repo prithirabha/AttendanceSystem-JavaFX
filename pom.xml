@@ -154,6 +154,7 @@
                lets one BackupTest plant a trigger in a throwaway database, which H2 can only
                instantiate when the package is open to it (the app itself never opens it) -->
           <argLine>@{argLine}
+            -Dattendance.demo=true
             --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
             --add-opens javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
             --enable-native-access=javafx.graphics
@@ -219,6 +220,10 @@
             <id>default-cli</id>
             <configuration>
               <mainClass>com.bsmi.attendancesystem/com.bsmi.attendancesystem.AttendanceApplication</mainClass>
+              <!-- A development run (mvn javafx:run) shows demo data; the packaged app never sets this -->
+              <options>
+                <option>-Dattendance.demo=true</option>
+              </options>
             </configuration>
           </execution>
         </executions>

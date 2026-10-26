@@ -17,6 +17,8 @@ module com.bsmi.attendancesystem {
 
     // Flyway reads the SQL files through the class loader, which needs the folder opened
     opens db.migration;
+    // Only loaded in development builds (-Dattendance.demo=true), but opened either way
+    opens db.demo;
     opens com.bsmi.attendancesystem to javafx.fxml;
     exports com.bsmi.attendancesystem;
 }

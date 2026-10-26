@@ -1,5 +1,9 @@
--- Demo data so a fresh install has something to show. All people are fictional.
+-- Demo data for development and the source build only; releases ship without it (the app adds
+-- this folder to Flyway only when started with -Dattendance.demo=true). All people are fictional.
 -- Logins: admin / admin123 (Admin), employee / employee123 (Employee).
+-- A Flyway *repeatable* migration (R__): it has no version, so it never changes the schema version
+-- backups compare against, and runs once after the versioned schema files (again only if it
+-- changes).
 
 INSERT INTO admin (username, password_hash, user_role) VALUES
     ('admin',    '$2a$12$/TSI06SDr1tpZOG3Uqpko.iGs508jyAlyUHW1IfRenmBv/Jq8TekO', 'Admin'),
@@ -17,6 +21,9 @@ INSERT INTO student (studentNum, semester, course, firstName, lastName, gender, 
     (1004, '5th Sem', 'BSc', 'Kabir',  'Singh',  'Male',   DATE '2004-07-30', 'Enrolled',  '', CURRENT_DATE - 60),
     (1005, '2nd Sem', 'MCA', 'Tara',   'Bose',   'Other',  DATE '2002-11-15', 'Enrolled',  '', CURRENT_DATE - 5),
     (1006, 'Graduated', 'BCA', 'Imran', 'Khan',  'Male',   DATE '2001-02-08', 'Graduated', '', CURRENT_DATE - 400);
+
+-- Cards for the demo students, so a fresh demo can be tried by typing DEMO-1001
+UPDATE student SET card_id = 'DEMO-' || studentNum WHERE studentNum BETWEEN 1001 AND 1006;
 
 -- Attendance relative to the day the database is created, so the dashboard
 -- shows "today" and a few days of history on first run.

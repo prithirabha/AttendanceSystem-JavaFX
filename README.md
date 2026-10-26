@@ -95,10 +95,14 @@ cd AttendanceSystem-JavaFX
 On Windows, use `mvnw.cmd javafx:run`. The build stops with a clear message if your JDK is older
 than 25. In IntelliJ IDEA, open the folder and run `AttendanceApplication`.
 
-### Demo logins
+### First run and demo logins
 
-On the first start the app creates its database and fills it with demo data: fictional students,
-three courses and a few days of attendance.
+A packaged release starts **empty**: on first run it asks you to create the first administrator,
+so there are no shipped passwords for anyone to look up.
+
+A build from source starts with demo data instead — fictional students, three courses and a few
+days of attendance — so you can try the app straight away. `mvn javafx:run` turns this on (it sets
+`-Dattendance.demo=true`), and the demo data creates two logins:
 
 | Username | Password | Role |
 |---|---|---|
@@ -111,7 +115,7 @@ changed. Logging in with a demo password shows a warning instead of "Login Succe
 
 ### Scan a card in 30 seconds
 
-1. Log in as `admin` / `admin123` and open **Attendance**.
+1. In a build from source, log in as `admin` / `admin123` and open **Attendance**.
 2. The **Scan card** field already has focus. Type `DEMO-1001` and press Enter: "Asha Verma
    checked in" appears and a new row shows up in the table. Every demo student has a card,
    `DEMO-1001` to `DEMO-1006`.
@@ -176,7 +180,8 @@ location:
 | macOS   | `~/Library/Application Support/AttendanceSystem`                |
 | Linux   | `$XDG_DATA_HOME/AttendanceSystem` (default `~/.local/share/AttendanceSystem`) |
 
-Delete that folder to start over with fresh demo data. To use another folder, start the app with
+Delete that folder to start over: a build from source fills it with demo data again, while a
+release starts empty and asks for a new administrator. To use another folder, start the app with
 `-Dattendance.home=<folder>`. To use another database, set `ATTENDANCE_DB_URL`,
 `ATTENDANCE_DB_USER` and `ATTENDANCE_DB_PASSWORD`.
 
@@ -196,8 +201,8 @@ such a file back:
   `.attbackup` file. For a copy off this computer, save it into a folder that OneDrive,
   Nextcloud or Syncthing keeps in sync.
 - **Restore:** on Manage Users, click **Restore...**, pick the file and type its password. The
-  app closes; open it again to use the restored data. On a new computer, log in with the demo
-  admin first.
+  app closes; open it again to use the restored data. On a new computer, create the administrator
+  on first run and log in, then restore.
 - **The backup password can't be recovered.** Without it the file can't be opened, so keep it
   somewhere safe, such as a password manager.
 - A restore never deletes the data it replaces: it moves it into a `before-restore-<date-time>`

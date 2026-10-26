@@ -16,8 +16,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class BackupDaoTest {
-    // V1 to V3 in src/main/resources/db/migration
-    private static final int NEWEST_MIGRATION = 3;
+    // The newest versioned schema migration (V2 in db/migration); the demo data is a repeatable
+    // migration in db/demo, so it is unversioned and does not count here
+    private static final int NEWEST_MIGRATION = 2;
 
     @TempDir Path tempDir;
 
